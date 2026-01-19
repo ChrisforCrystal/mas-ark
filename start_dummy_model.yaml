@@ -1,0 +1,21 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Model
+metadata:
+  name: default
+  namespace: default
+spec:
+  # 使用 OpenAI 兼容模式
+  provider: openai
+
+  model:
+    value: qwen3-max-preview
+
+  config:
+    openai:
+      # 阿里云 DashScope 兼容接口地址
+      baseUrl:
+        value: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+
+      # 请在此处填入你的各种 KEY
+      apiKey:
+        value: "sk-216ef44f260a494dae79fdd3f4b6c9f9"
