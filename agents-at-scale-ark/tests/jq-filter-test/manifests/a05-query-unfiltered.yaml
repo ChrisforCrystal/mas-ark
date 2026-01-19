@@ -1,0 +1,9 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: test-query-unfiltered
+spec:
+  input: "Please use the test-json-api tool to get data."
+  target:
+    type: agent
+    name: test-agent-unfiltered

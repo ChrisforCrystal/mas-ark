@@ -1,0 +1,25 @@
+# Tools Directory
+
+Add your custom tools here as Kubernetes YAML files.
+
+Each tool should be defined as a YAML file containing the necessary Kubernetes resources:
+- Deployment
+- Service  
+- MCPServer (for MCP integration)
+
+Example structure:
+```
+tools/
+├── my-tool.yaml          # Complete tool definition
+├── data-processor.yaml   # Another tool
+└── examples/             # Example implementations
+    └── data-tool/
+        ├── Dockerfile
+        ├── main.py
+        └── requirements.txt
+```
+
+Tool YAML files will be automatically deployed by the Helm chart.
+
+For complex tools that need their own Helm charts and independent lifecycle, 
+use `ark generate mcp-server` in the `mcp-servers/` directory instead.

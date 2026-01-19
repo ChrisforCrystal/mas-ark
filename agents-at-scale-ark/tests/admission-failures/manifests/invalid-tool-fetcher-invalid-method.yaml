@@ -1,0 +1,14 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Tool
+metadata:
+  name: invalid-tool-fetcher-invalid-method
+spec:
+  type: http
+  inputSchema:
+    type: object
+    properties:
+      param:
+        type: string
+  http:
+    url: https://example.com
+    method: INVALID  # Invalid HTTP method - should fail admission

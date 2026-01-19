@@ -1,0 +1,27 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: creator-test-query
+spec:
+  input: |
+    Please create a professional document based on this analysis:
+    
+    Analysis Report: Kubernetes Enterprise Adoption
+    
+    Key Insights:
+    1. Scalability Impact: 87% improvement in scaling capabilities
+    2. Cost Efficiency: 23% average cost reduction through better resource utilization
+    3. Operational Speed: 200% increase in deployment frequency
+    4. Reliability: Recovery time reduced from 4 hours to 15 minutes
+    5. Developer Experience: 35% productivity improvement
+    
+    Recommendations:
+    - Prioritize training and skill development
+    - Implement gradual migration strategy
+    - Focus on monitoring and observability
+    - Establish clear governance policies
+    
+    Please create a comprehensive document and save it to the filesystem.
+  targets:
+    - type: agent
+      name: creator

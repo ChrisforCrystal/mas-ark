@@ -1,0 +1,106 @@
+---
+title: "Local Development"
+description: "Local development with DevSpace for ARK services"
+---
+
+## Local development with DevSpace
+
+Develop and live-reload ARK services directly in your Kubernetes cluster using DevSpace.
+
+## Prerequisites
+- A running Kubernetes cluster (e.g., minikube)
+- kubectl, uv and DevSpace installed
+- Docker running locally
+
+## One-time setup
+```bash
+# Install DevSpace
+brew install devspace uv
+```
+
+You can either start the entire project by doing
+```bash
+devspace dev
+```
+
+Each service contains their own devspace config. If you wish to start individual services and wish to use localhost gateway routes, you must first start it
+
+```bash
+devspace dev --dependency localhost-gateway
+```
+
+then start your desired service by running
+```bash
+devspace dev --dependency ark-api
+## or from the subdirectory itself
+cd services/ark-api
+devspace dev
+```
+
+cert-manager or gateway-api are installed by default to disable them use env vars `ENABLE_CERT_MANAGER` and `ENABLE_GATEWAY_API_CRDS`
+
+```bash
+ENABLE_CERT_MANAGER=false devspace dev
+```
+
+- ark-api and ark-dashboard deploy to namespace: default
+- ark-controller and localhost-gateway deploys to namespace: ark-system
+
+## Check deployment status
+```bash
+devspace list deployments --namespace default
+devspace list deployments --namespace ark-system
+```
+
+## Open the dashboard
+
+You can find a link to the dashboard by getting the current available endpoints
+
+```bash
+devspace run routes
+```
+
+- Or you can port-forward the dashboard yourself:
+```bash
+kubectl port-forward -n default svc/ark-dashboard 3000:3000
+# Then open http://localhost:3000
+```
+
+## Live reload behavior
+- `ark-dashboard`: hot reloads on save
+- `ark-api`: hot reloads on save  
+- `ark-controller`: restarts container on save
+
+## When you change CRDs
+
+Regenerate the manifests from the kubebuilder annotations:
+
+```bash
+cd ark/
+make manifests
+kubectl apply -f config/crd/bases/ark.mckinsey.com_queries.yaml
+```
+
+Regenerate the Ark SDK with the updated resource types based on the CRDS:
+
+```bash
+make ark-sdk-build
+```
+
+This will:
+- Convert CRDs to OpenAPI spec
+- Generate Python client from OpenAPI
+- Apply overlay files for custom functionality
+- Build the Python wheel
+
+More details on how the Ark SDK is generated and used is at the [Ark SDK Developer Guide](/developer-guide/ark-sdk).
+
+## Build/deploy production images
+```bash
+devspace deploy
+```
+
+## Clean up
+```bash
+devspace purge
+```

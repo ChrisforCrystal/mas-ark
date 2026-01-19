@@ -1,0 +1,24 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: test-{{ .Values.mcpServerName }}-query
+  labels:
+    app.kubernetes.io/name: {{ .Values.mcpServerName }}
+    app.kubernetes.io/component: query
+spec:
+  agents:
+    - name: sample-{{ .Values.mcpServerName }}-agent
+  
+  query: |
+{{- if .Values.sampleQuery }}
+    {{ .Values.sampleQuery }}
+{{- else }}
+    Test the {{ .Values.mcpServerName }} MCP server by using its available tools.
+    {{- range .Values.tools }}
+    Please try using the {{ .name }} tool.
+    {{- end }}
+{{- end }}
+  
+  parameters:
+    timeout: "5m"
+    maxTokens: 1000

@@ -1,0 +1,84 @@
+# ARK Deployer ClusterRole
+#
+# This ClusterRole defines the minimum permissions required to deploy ARK
+# to a Kubernetes cluster using Helm. It is designed for use by CI/CD systems
+# such as GitHub Actions, GitLab CI, or Jenkins.
+#
+# Usage:
+#   1. Apply this role to your cluster:
+#      kubectl apply -f ark/config/rbac/ark-deployer-role.yaml
+#
+#   2. Bind the role to your CI/CD identity using the helper script:
+#      ./scripts/deploy/bind-deployer-role.sh "your-org/your-repo"
+#
+# For more details, see: https://mckinsey.github.io/agents-at-scale-ark/operations-guide/deploying-ark/
+#
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ark-deployer
+  labels:
+    app.kubernetes.io/name: ark
+    app.kubernetes.io/component: deployer-rbac
+rules:
+# Namespace management - create and configure the ark-system namespace
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["get", "list", "create", "update", "patch"]
+
+# Core Kubernetes resources - deploy ARK services and supporting resources
+- apiGroups: [""]
+  resources: ["services", "serviceaccounts", "secrets", "configmaps", "persistentvolumeclaims"]
+  verbs: ["get", "list", "create", "update", "patch", "delete"]
+
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets", "daemonsets", "statefulsets"]
+  verbs: ["get", "list", "create", "update", "patch", "delete"]
+
+# RBAC management - create permissions for the ARK controller
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
+  verbs: ["get", "list", "create", "update", "patch", "delete"]
+
+# CRD installation - install ARK's Custom Resource Definitions
+- apiGroups: ["apiextensions.k8s.io"]
+  resources: ["customresourcedefinitions"]
+  verbs: ["get", "list", "create", "update", "patch"]
+
+# Admission webhooks - configure ARK's validation and mutation webhooks
+- apiGroups: ["admissionregistration.k8s.io"]
+  resources: ["validatingwebhookconfigurations", "mutatingwebhookconfigurations"]
+  verbs: ["get", "list", "create", "update", "patch", "delete"]
+
+# Certificate management - manage TLS certificates for webhooks
+- apiGroups: ["cert-manager.io"]
+  resources: ["certificates", "issuers", "clusterissuers"]
+  verbs: ["get", "list", "create", "update", "patch"]
+
+# ARK Custom Resources - deployment access to manage ARK resources
+- apiGroups: ["ark.mckinsey.com"]
+  resources: 
+  - "agents"
+  - "evaluators"
+  - "mcpservers"
+  - "memories"
+  - "models"
+  - "queries"
+  - "teams"
+  - "tools"
+  - "a2aservers"
+  - "executionengines"
+  verbs: ["get", "list", "create", "update", "patch", "delete"]
+
+# Read access for deployment verification and troubleshooting  
+- apiGroups: [""]
+  resources: ["pods", "events", "replicationcontrollers"]
+  verbs: ["get", "list"]
+
+# Additional read access for debugging failed deployments
+- apiGroups: ["autoscaling"]
+  resources: ["horizontalpodautoscalers"]
+  verbs: ["get", "list"]
+- apiGroups: ["batch"]  
+  resources: ["jobs", "cronjobs"]
+  verbs: ["get", "list"]

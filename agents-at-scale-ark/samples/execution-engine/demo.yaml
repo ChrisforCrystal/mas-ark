@@ -1,0 +1,41 @@
+# 1. Custom Execution Engine Resource
+# This tells Ark: "There is an engine running at this URL"
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: ExecutionEngine
+metadata:
+  name: py-adk-engine
+spec:
+  type: custom
+  address:
+    value: "http://host.docker.internal:8090" # For local demo, pointing to host machine
+  description: "My custom Python ADK engine running locally"
+
+
+# 2. Agent using the Engine
+# This tells Ark: "Don't use default OpenAI loop, send request to py-adk-engine"
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: adk-agent
+spec:
+  description: "Agent running on custom engine"
+  executionEngine:
+    name: py-adk-engine
+  prompt: "You are an agent managed by ADK code."
+  modelRef:
+    name: default # Still needs a model ref even if engine handles it (schema req)
+
+
+# 3. Query
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: adk-query
+spec:
+  target:
+    name: adk-agent
+    type: agent
+  input: "Testing custom engine connection"

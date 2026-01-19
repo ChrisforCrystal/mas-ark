@@ -1,0 +1,7 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: invalid-agent-old-format
+spec:
+  prompt: "Test agent using old format"
+  model: test-model  # Deprecated format - should use modelRef instead

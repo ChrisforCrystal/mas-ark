@@ -1,0 +1,19 @@
+apiVersion: v2
+name: {{.Values.projectName}}
+description: A Helm chart for {{ .Values.projectName }} - Agents at Scale project
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+home: https://github.com/your-org/{{ .Values.projectName }}
+sources:
+  - https://github.com/your-org/{{ .Values.projectName }}
+maintainers:
+  - name: {{.Values.authorName}}
+    email: {{.Values.authorEmail}}
+keywords:
+  - agents
+  - ai
+  - automation
+  - ark
+annotations:
+  category: AI/ML

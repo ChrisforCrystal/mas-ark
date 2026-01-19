@@ -1,0 +1,108 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: research-analysis-creation-workflow-test
+spec:
+  description: Tests the complete research-analysis-creation workflow with web search and file storage
+  timeouts:
+    apply: 60s
+    assert: 300s
+    cleanup: 60s
+  steps:
+    - name: install-model
+      try:
+        - script:
+            skipLogOutput: true
+            content: |
+              set -u
+              echo "{\"token\": \"$E2E_TEST_AZURE_OPENAI_KEY\", \"url\": \"$E2E_TEST_AZURE_OPENAI_BASE_URL\"}"
+            outputs:
+            - name: azure
+              value: (json_parse($stdout))
+        - apply:
+            file: "manifests/model/*.yaml"
+        - assert:
+            resource:
+              apiVersion: ark.mckinsey.com/v1alpha1
+              kind: Model
+              metadata:
+                name: default
+              status:
+                phase: ready
+    - name: setup-rbac-permissions
+      try:
+        - apply:
+            file: "manifests/rbac/*.yaml"
+    - name: deploy-research-workflow
+      try:
+        - apply:
+            file: "manifests/resources/*.yaml"
+        - assert:
+            resource:
+              apiVersion: ark.mckinsey.com/v1alpha1
+              kind: Tool
+              metadata:
+                name: web-search
+              spec:
+                type: http
+        - assert:
+            resource:
+              apiVersion: ark.mckinsey.com/v1alpha1
+              kind: Agent
+              metadata:
+                name: researcher
+        - assert:
+            resource:
+              apiVersion: ark.mckinsey.com/v1alpha1
+              kind: Agent
+              metadata:
+                name: analyst
+        - assert:
+            resource:
+              apiVersion: ark.mckinsey.com/v1alpha1
+              kind: Agent
+              metadata:
+                name: creator
+        - assert:
+            resource:
+              apiVersion: ark.mckinsey.com/v1alpha1
+              kind: Team
+              metadata:
+                name: research-analysis-team
+              spec:
+                strategy: sequential
+      catch:
+        - events: {}
+
+    - name: test-research-workflow
+      try:
+        - apply:
+            file: "manifests/test-query.yaml"
+        - assert:
+            resource:
+              apiVersion: ark.mckinsey.com/v1alpha1
+              kind: Query
+              metadata:
+                name: test-research-workflow
+              status:
+                phase: done
+        - assert:
+            resource:
+              apiVersion: ark.mckinsey.com/v1alpha1
+              kind: Query
+              metadata:
+                name: test-research-workflow
+              status:
+                (length(responses)): 1
+                (length(responses[0].content) > `100`): true
+                (contains(responses[0].content, 'Kubernetes') || contains(responses[0].content, 'kubernetes')): true
+                (contains(responses[0].content, 'Enterprise') || contains(responses[0].content, 'enterprise')): true
+                (contains(responses[0].target.name, 'research-analysis-team')): true
+      catch:
+        - events: {}
+        - describe:
+            apiVersion: ark.mckinsey.com/v1alpha1
+            kind: Query
+            name: test-research-workflow
+
+      

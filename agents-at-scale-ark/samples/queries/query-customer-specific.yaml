@@ -1,0 +1,137 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: customer-onboarding-query
+spec:
+  input: |
+    Customer Onboarding Analysis for {{.customer_name}}:
+    
+    Customer Details:
+    - Company: {{.customer_name}}
+    - Industry: {{.industry}}
+    - Size: {{.company_size}}
+    - Region: {{.region}}
+    
+    Configuration:
+    - Onboarding Template: {{.template_type}}
+    - Support Level: {{.support_tier}}
+    - Integration Requirements: {{.integrations}}
+    
+    Access Information:
+    - Portal URL: {{.portal_url}}
+    - API Endpoint: {{.api_endpoint}}
+    - Documentation: {{.docs_url}}
+    
+    Please generate a comprehensive onboarding plan including:
+    1. Setup checklist
+    2. Integration recommendations  
+    3. Support contact information
+    4. Timeline estimates
+  parameters:
+    # Customer-specific direct values
+    - name: customer_name
+      value: "Acme Corporation"
+    - name: industry
+      value: "Manufacturing"
+    - name: company_size
+      value: "Enterprise (10,000+ employees)"
+    - name: region
+      value: "North America"
+    
+    # Configuration from ConfigMaps
+    - name: template_type
+      valueFrom:
+        configMapKeyRef:
+          name: onboarding-config
+          key: enterprise-template
+    - name: support_tier
+      valueFrom:
+        configMapKeyRef:
+          name: customer-tiers
+          key: acme-corp-tier
+    - name: integrations
+      valueFrom:
+        configMapKeyRef:
+          name: integration-catalog
+          key: manufacturing-standard
+    
+    # URLs and endpoints from Secrets
+    - name: portal_url
+      valueFrom:
+        secretKeyRef:
+          name: customer-portals
+          key: acme-portal-url
+    - name: api_endpoint
+      valueFrom:
+        secretKeyRef:
+          name: api-endpoints
+          key: enterprise-api
+    - name: docs_url
+      valueFrom:
+        secretKeyRef:
+          name: documentation-urls
+          key: enterprise-docs
+  
+  target:
+    type: team
+    name: customer-success-team
+---
+# Onboarding configuration templates
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: onboarding-config
+data:
+  enterprise-template: "Enterprise Onboarding Template v2.1"
+  standard-template: "Standard Onboarding Template v1.8"
+  startup-template: "Startup Onboarding Template v1.5"
+---
+# Customer tier mappings
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: customer-tiers
+data:
+  acme-corp-tier: "Platinum"
+  beta-inc-tier: "Gold"
+  startup-co-tier: "Silver"
+---
+# Integration requirements by industry
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: integration-catalog
+data:
+  manufacturing-standard: "ERP, MES, Quality Management, Supply Chain"
+  financial-standard: "Core Banking, Risk Management, Compliance"
+  healthcare-standard: "EHR, HIPAA Compliance, Patient Portal"
+---
+# Customer-specific URLs and endpoints (sensitive)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: customer-portals
+type: Opaque
+stringData:
+  acme-portal-url: "https://acme.customer-portal.company.com"
+  beta-portal-url: "https://beta.customer-portal.company.com"
+---
+# API endpoints for different customer tiers
+apiVersion: v1
+kind: Secret
+metadata:
+  name: api-endpoints
+type: Opaque
+stringData:
+  enterprise-api: "https://enterprise-api.company.com/v2"
+  standard-api: "https://api.company.com/v1"
+---
+# Documentation URLs by tier
+apiVersion: v1
+kind: Secret
+metadata:
+  name: documentation-urls
+type: Opaque
+stringData:
+  enterprise-docs: "https://docs.company.com/enterprise"
+  standard-docs: "https://docs.company.com/standard"

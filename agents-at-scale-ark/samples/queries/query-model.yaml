@@ -1,0 +1,10 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: sample-model-query
+  namespace: default
+spec:
+  input: What is 2+2-9*6?
+  targets:
+  - name: default
+    type: model

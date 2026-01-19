@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+*.log
+
+# Build output
+dist/
+coverage/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local config
+.arkrc.yaml
+
+# Test
+.nyc_output
+*.lcov
+
+# Cache
+.eslintcache
+.cache
+
+# Templates (copied from parent repo during build)
+templates/

@@ -1,0 +1,134 @@
+---
+title: Query Execution Flow
+description: How queries are processed through the ARK system
+---
+
+# Query Execution Flow
+
+This page explains how a Query is executed in the ARK platform, from creation to completion.
+
+## Overview
+
+When you create a Query resource, it triggers a hierarchical execution flow:
+
+1. **Query** - Created by user with input and targets
+2. **Query Controller** - Orchestrates the execution
+3. **Agents or Teams** - Process the query
+   - Teams use strategies to coordinate multiple agents
+   - Agents execute prompts against models
+4. **Models** - Generate responses and can invoke:
+   - Tools - Custom functions
+   - MCP Servers - External service integrations
+5. **Optional Components**:
+   - Memory - Provides conversation context
+   - Execution Engines - Custom implementations for queries, agents, or teams
+
+## Execution Steps
+
+### 1. Query Creation
+
+A user creates a Query resource specifying:
+- **input**: The user's question or request
+- **targets**: One or more Agents or Teams
+- **parameters** (optional): Values to use in the query or pass to agent parameters via queryParameterRef
+- **memory** (optional): Reference to a Memory resource
+- **sessionId** (optional): Conversation session identifier
+- **serviceAccount** (optional): For RBAC isolation
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: my-query
+spec:
+  input: "What is the weather today?"
+  target:
+    type: agent
+    name: weather-agent
+  parameters:
+    - name: agent_name
+      value: "WeatherBot"
+  memory:
+    name: conversation-memory
+```
+
+### 2. Controller Processing
+
+The Query controller detects the new Query and:
+1. Creates an impersonated Kubernetes client using the specified service account
+2. Resolves the Memory reference (if provided)
+3. Determines the execution strategy based on targets
+4. Initiates execution for each target
+
+### 3. Target Execution
+
+For each target (Agent or Team):
+
+#### Agent Execution
+1. **Model Resolution**: Resolves the agent's model reference
+2. **Parameter Resolution**: Resolves agent parameters from:
+   - Static values
+   - ConfigMaps and Secrets
+   - Query parameters
+3. **Prompt Construction**: Builds the final prompt from:
+   - Agent's system prompt
+   - Memory context (if configured)
+   - User input
+4. **Tool Preparation**: Prepares available tools and MCP servers
+5. **Model Invocation**: Sends request to the model provider
+6. **Tool Execution**: Handles any tool calls from the model
+7. **Response Generation**: Collects and formats the final response
+
+#### Team Execution
+1. **Strategy Application**: Uses the team's strategy (sequential, parallel, etc.)
+2. **Member Coordination**: Orchestrates execution across team members
+3. **Result Aggregation**: Combines responses according to strategy
+
+### 4. Response Handling
+
+The controller:
+1. Collects responses from all targets
+2. Updates the Query status with results
+3. Stores conversation in Memory (if configured)
+4. Marks the Query as completed
+
+## Execution Engines
+
+Custom execution engines can override default behavior at different levels:
+
+- **Query Engines**: Custom query processing logic
+- **Agent Engines**: Custom agent execution (e.g., LangChain, AutoGen)
+- **Team Engines**: Custom team coordination strategies
+
+## Error Handling
+
+The system handles errors gracefully:
+- **Model Errors**: API failures, rate limits, invalid responses
+- **Tool Errors**: Tool execution failures, timeouts
+- **Resource Errors**: Missing agents, models, or tools
+- **Permission Errors**: RBAC violations, service account issues
+
+Failed queries are marked with error status and detailed error messages.
+
+## Observability
+
+Query execution is fully observable through:
+- **Kubernetes Events**: Resource creation and status changes
+- **OpenTelemetry Traces**: Detailed execution spans
+- **Logs**: Structured logging throughout the pipeline
+- **Metrics**: Performance and error metrics
+
+## Example Flow
+
+Here's a complete example of a weather query execution:
+
+1. User creates Query targeting `weather-agent`
+2. Controller resolves `weather-agent` and its `gpt-4` model
+3. Agent constructs prompt with weather tools available
+4. Model calls `get-weather` tool with location parameter
+5. Tool executes and returns weather data
+6. Model generates natural language response
+7. Controller updates Query with final response
+8. Memory stores conversation for future context
+
+This flow demonstrates ARK's orchestration of multiple components to deliver intelligent, tool-enabled responses.

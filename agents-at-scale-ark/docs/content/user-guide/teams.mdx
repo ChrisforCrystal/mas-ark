@@ -1,0 +1,111 @@
+---
+title: Teams
+description: Coordinate multiple agents working together
+---
+
+# Teams
+
+Teams are collections of agents that work together to accomplish complex tasks. They coordinate multiple agents using different strategies to process inputs and generate comprehensive outputs.
+
+Teams enable multi-agent collaboration by defining how agents should work together. Different execution strategies allow teams to handle various workflow patterns like sequential processing, parallel execution, or specialized coordination.
+## Creating Your First Team
+
+Let's use the Sequential Team defined in `samples/teams/sequential.yaml`. This team contains multiple instances of the same agent working in sequence.
+
+First, we need to apply the team configuration which includes both the agent and team definitions:
+
+```bash
+kubectl apply -f samples/teams/sequential.yaml
+```
+
+Now, let's query the team using the sample query:
+
+```bash
+fark query query-seq
+```
+
+After all the above steps, we can also query the team directly using fark:
+
+```bash
+fark team team-seq "Hello from the team!"
+```
+
+## Modifying Teams
+
+You can modify existing teams in several ways:
+
+### Update Team Configuration
+
+```bash
+# Change the team strategy
+kubectl patch team team-seq --type='merge' -p='{
+  "spec": {
+    "strategy": "round-robin"
+  }
+}'
+
+# Add more members to the team
+kubectl patch team team-seq --type='json' -p='[{
+  "op": "add",
+  "path": "/spec/members/-",
+  "value": {
+    "name": "agent-seq",
+    "type": "agent"
+  }
+}]'
+```
+
+### Edit Team Files Directly
+
+```bash
+# Edit team configuration interactively
+kubectl edit team team-seq
+
+# Or update from a modified file
+kubectl apply -f samples/teams/sequential.yaml
+```
+
+## Managing Team Resources
+
+### List and Inspect Teams
+
+```bash
+# List all teams
+kubectl get teams
+
+# Get detailed information about a team
+kubectl describe team team-seq
+
+# View the full team configuration
+kubectl get team team-seq -o yaml
+```
+
+### Verify Team Functionality
+
+```bash
+# Test the team after creation or modification
+fark team team-seq "Process this request through the team"
+
+# Check recent queries
+kubectl get queries
+
+# View query details
+kubectl describe query query-seq
+```
+
+## Deleting Teams
+
+Remove teams when they're no longer needed:
+
+```bash
+# Delete a specific team
+kubectl delete team team-seq
+
+# Delete multiple teams
+kubectl delete team team-seq research-team analysis-team
+
+# Delete all teams (use with caution!)
+kubectl delete teams --all
+```
+
+**Next**: Learn about the [Concepts and Building Blocks](/user-guide/queries) that power ARK.

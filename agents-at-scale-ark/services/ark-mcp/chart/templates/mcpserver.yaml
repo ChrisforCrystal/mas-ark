@@ -1,0 +1,21 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: MCPServer
+metadata:
+  name: {{ .Values.service.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Values.app.name }}
+  annotations:
+    {{- with .Values.global.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  address:
+    valueFrom: 
+      serviceRef:
+        name: {{ .Values.service.name }}
+        port: "http"
+        namespace: {{ .Release.Namespace }}
+  timeout: "60s"
+  transport: http
+  description: "MCP server for Ark resources - provides tools to list agents and query agents directly"

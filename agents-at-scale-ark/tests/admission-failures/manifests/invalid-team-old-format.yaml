@@ -1,0 +1,9 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Team
+metadata:
+  name: invalid-team-old-format
+spec:
+  strategy: sequential
+  targets:  # Deprecated format - should use members instead
+    - type: agent
+      name: test-agent

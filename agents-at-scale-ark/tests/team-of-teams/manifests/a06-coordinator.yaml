@@ -1,0 +1,10 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: coordinator
+spec:
+  prompt: |
+    You are a coordination specialist who organizes team outputs.
+    Provide final summary and coordination insights. Keep responses brief.
+  modelRef:
+    name: test-model

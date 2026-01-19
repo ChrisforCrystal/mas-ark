@@ -1,0 +1,92 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Model
+metadata:
+  name: azure-with-properties
+spec:
+  type: azure
+  model:
+    value: gpt-4.1-mini
+  config:
+    azure:
+      properties:
+        # Temperature controls randomness (0.0-2.0, default: 1.0)
+        temperature:
+          value: "0.1"
+        # Maximum tokens to generate
+        max_tokens:
+          value: "1000"
+        # Nucleus sampling parameter (0.0-1.0)
+        top_p:
+          value: "0.9"
+        # Penalize frequent tokens (-2.0 to 2.0)
+        frequency_penalty:
+          value: "0.1"
+        # Penalize repeated topics (-2.0 to 2.0)
+        presence_penalty:
+          value: "0.1"
+        # Stop sequence for generation
+        stop:
+          value: "END"
+        # Deterministic sampling seed
+        seed:
+          value: "42"
+        # End-user identifier
+        user:
+          value: "user-123"
+      baseUrl:
+        value: "https://lxo.openai.azure.com"
+      apiKey:
+        valueFrom:
+          secretKeyRef:
+            name: default-model-token
+            key: token
+      apiVersion:
+        value: "2024-12-01-preview"
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Model
+metadata:
+  name: openai-with-properties
+spec:
+  type: openai
+  model:
+    value: gpt-4.1-mini
+  config:
+    openai:
+      properties:
+        temperature:
+          value: "0.7"
+        max_tokens:
+          value: "2000"
+        top_p:
+          value: "0.95"
+        logprobs:
+          value: "true"
+        top_logprobs:
+          value: "5"
+      baseUrl:
+        value: "https://api.openai.com/v1"
+      apiKey:
+        valueFrom:
+          secretKeyRef:
+            name: openai-secret
+            key: token
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Model
+metadata:
+  name: bedrock-with-properties
+spec:
+  type: bedrock
+  model:
+    value: "us.anthropic.claude-sonnet-4-20250514-v1:0"
+  config:
+    bedrock:
+      properties:
+        temperature:
+          value: "0.5"
+        max_tokens:
+          value: "4096"
+      region:
+        value: "us-west-2"
+

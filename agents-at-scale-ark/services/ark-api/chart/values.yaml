@@ -1,0 +1,135 @@
+# ARK API chart values
+
+# Global annotations added to all resources
+global:
+  annotations:
+    ark.mckinsey.com/service: ark-api
+
+# Application configuration
+app:
+  name: ark-api
+  image:
+    repository: ghcr.io/mckinsey/agents-at-scale-ark/ark-api
+    # tag defaults to .Chart.AppVersion if not specified
+    pullPolicy: IfNotPresent
+  
+  # Resource configuration
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+  # L2 FIX: Pod security context for hardening
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1001
+    fsGroup: 1001
+    seccompProfile:
+      type: RuntimeDefault
+
+  # L2 FIX: Container security context for hardening
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false  # FastAPI needs writable filesystem
+    capabilities:
+      drop:
+        - ALL
+
+  # Environment variables - often useful to allow other websites to hit the
+  # APIs - not suitable for production environments.
+  env:
+    - name: CORS_ORIGINS
+      value: "*"
+    # Authentication environment variables
+    - name: OIDC_ISSUER_URL
+      value: ""
+    - name: OIDC_APPLICATION_ID
+      value: ""
+    # AUTH_MODE options:
+    # - "sso": OIDC/JWT authentication only
+    # - "basic": API key basic authentication only  
+    # - "hybrid": Both OIDC/JWT and basic authentication (recommended for production)
+    # - "open": No authentication (development only)
+    - name: AUTH_MODE
+      value: "open"
+    # Proxy timeout configuration
+    # Timeout in seconds for proxy requests to A2A, MCP servers and services
+    # Default: 10.0 seconds
+    - name: PROXY_TIMEOUT
+      value: "10.0"
+    # A2A Gateway environment variables
+    # These configure the external URLs advertised in agent cards (.well-known/agent.json)
+    # Must match your external routing configuration (HTTPRoute/Ingress)
+    - name: ARK_A2A_AGENT_CARD_PORT
+      value: "8000"
+    - name: ARK_A2A_AGENT_CARD_HOST
+      value: "ark-api.127.0.0.1.nip.io"
+    - name: ARK_A2A_AGENT_CARD_PROTOCOL
+      value: "http"
+    # ARK_A2A_AGENT_CARD_PATH is optional - leave empty for root path
+    # - name: ARK_A2A_AGENT_CARD_PATH
+    #   value: ""
+  # Optional: Import entire secrets/configmaps as env vars
+  # envFrom:
+  #   - secretRef:
+  #       name: azure-openai-secret
+  #       optional: true
+
+# Service configuration
+service:
+  name: ark-api
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+
+# Ingress configuration (legacy routing method)
+# Disabled by default. Use this for traditional Kubernetes Ingress routing.
+# For newer deployments, consider using HTTPRoute (below) with Gateway API instead.
+ingress:
+  enabled: false
+  className: ""  # e.g., "nginx", "traefik", "kong"
+  annotations:
+    # Security headers for clickjacking protection (M1) and general hardening (L3)
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: DENY";
+      more_set_headers "Content-Security-Policy: frame-ancestors 'none'";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+      more_set_headers "Strict-Transport-Security: max-age=31536000; includeSubDomains";
+      more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: ark-api.example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+  #  - secretName: ark-api-tls
+  #    hosts:
+  #      - ark-api.example.local
+
+# HTTPRoute configuration (Gateway API - modern routing method)
+# Disabled by default. This is the preferred routing method for Kubernetes 1.23+
+# with Gateway API CRDs installed. Example values below show localhost development setup.
+httpRoute:
+  enabled: false
+  annotations: {}
+    # Custom annotations can be added here
+  # Gateway references
+  parentRefs:
+    - name: localhost-gateway
+      namespace: ark-system
+  # Hostnames this route matches
+  hostnames:
+    - "ark-api.127.0.0.1.nip.io"
+    - "ark-api.default.127.0.0.1.nip.io"
+
+# Service account configuration
+serviceAccount:
+  name: ark-api-sa
+  create: true

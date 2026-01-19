@@ -1,0 +1,253 @@
+---
+title: Build System and Makefile Overview
+description: Understanding the ARK build system and Makefile structure
+---
+
+# Build System Overview
+
+The ARK project uses a hierarchical Makefile-based build system that provides consistent commands across all services and libraries while maintaining flexibility for individual components.
+
+## Common Commands
+
+All services follow the pattern `<service-name>-<action>`. Here are some examples:
+
+```bash
+make ark-api-install      # Deploy ARK API server to cluster
+make ark-api-build        # Build ARK API Docker image
+make ark-dashboard-dev    # Run dashboard in development mode with hot reload
+make ark-dashboard-test   # Run dashboard test suite
+make ark-dashboard-uninstall  # Remove dashboard from cluster
+make ark-dashboard-clean-stamps  # Ensure that 'build' will not be cached
+```
+
+Aggregate targets are available for building and testing multiple components:
+
+```bash
+make build-all           # Build all libraries and services
+make test-all           # Run tests for all components
+make help               # Display all available targets with descriptions
+```
+
+Use the `-j` flag to run targets in parallel where supported:
+
+```bash
+make -j4 build-all       # Build with 4 parallel jobs
+```
+
+## Architecture
+
+### Stamp Files
+
+The build makes extensive use of stamp files and phony targets.  This idiom may not be immediately clear if you've never encountered it before.
+
+Stamp files are empty marker files (e.g., `out/ark-api/stamp-build`) that track when a target was last completed. Make uses their timestamps to determine if dependencies have changed and rebuilding is needed. While `.PHONY` targets always run, stamp file targets only run when their prerequisites are newer than the stamp file itself.
+
+```makefile
+# .PHONY target always runs when called
+.PHONY: ark-api-build
+ark-api-build: $(ARK_API_STAMP_BUILD)  # but depends on stamp file
+
+# Stamp target only runs if dependencies changed
+$(ARK_API_STAMP_BUILD): $(ARK_API_SERVICE_DIR)/src/*.py
+	docker build -t ark-api .
+	@touch $@
+```
+
+Note how `ark-api-build` depends on the stamp file - this allows the phony target to be called directly while still benefiting from dependency tracking. Stamp file targets should be idempotent, producing the same result when run multiple times.
+
+### Top-Level Makefile
+
+The root `Makefile` serves as the main entry point for all build operations. It:
+- Includes the `helpers.mk` file for common macros and variables
+- Includes aggregate makefiles (`lib/lib.mk`, `services/services.mk`) 
+- Defines high-level targets like `quickstart`, `build-all`, and `test-all`
+- Provides the `help` target that displays all available commands
+
+```makefile
+.DEFAULT_GOAL := help
+
+include helpers.mk
+-include lib/lib.mk
+-include services/services.mk
+```
+
+### helpers.mk
+
+The `helpers.mk` file contains shared variables and macros used throughout the build system:
+
+```makefile
+# Define build root and output directory
+BUILD_ROOT := $(abspath .)
+OUT := $(BUILD_ROOT)/out
+
+# Define Python command
+PYTHON := $(shell command -v python3 || command -v python)
+
+# Lists for tracking targets
+CLEAN_TARGETS :=
+INSTALL_TARGETS :=
+```
+
+Key macros include:
+- `STAMP_TARGET` - Creates timestamp-based build targets
+- `BUILD_BINARY` - Pattern for building binaries
+- `INSTALL_DEPS` - Pattern for dependency management
+
+## Help System
+
+The help system automatically discovers and displays all available targets marked with `# HELP:` comments:
+
+```makefile
+# In any Makefile
+quickstart: # HELP: get everything up and running
+build-all: libs-build-all services-build-all # HELP: build all libraries and services
+```
+
+Running `make help` executes a Python script that:
+1. Parses all included Makefiles
+2. Finds targets with `# HELP:` annotations
+3. Categorizes them based on source location (main/lib/service)
+4. Displays them in a formatted, color-coded output
+
+## Service build.mk Structure
+
+Each service has a `build.mk` file that follows a consistent pattern. Here's an example from `ark-api`:
+
+```makefile
+# ark-api service build configuration
+
+ARK_API_SERVICE_NAME := ark-api
+ARK_API_SERVICE_DIR := services/$(ARK_API_SERVICE_NAME)
+ARK_API_OUT := $(OUT)/$(ARK_API_SERVICE_NAME)
+
+# Pre-calculate stamp paths
+ARK_API_STAMP_DEPS := $(ARK_API_OUT)/stamp-deps
+ARK_API_STAMP_TEST := $(ARK_API_OUT)/stamp-test
+ARK_API_STAMP_BUILD := $(ARK_API_OUT)/stamp-build
+
+# Register for cleanup
+$(eval $(call ADD_CLEAN_TARGET,$(ARK_API_OUT)))
+
+# Define phony targets
+.PHONY: $(ARK_API_SERVICE_NAME)-build $(ARK_API_SERVICE_NAME)-test
+
+# Test target with help annotation
+$(ARK_API_SERVICE_NAME)-test: $(ARK_API_STAMP_TEST) # HELP: Run ARK API server tests
+$(ARK_API_STAMP_TEST): $(ARK_API_STAMP_DEPS)
+	cd $(ARK_API_SERVICE_DIR) && uv run python -m pytest
+	@touch $@
+```
+
+## Clean Target Management
+
+The `ADD_CLEAN_TARGET` macro allows services to register paths for cleanup:
+
+```makefile
+# Register output directory
+$(eval $(call ADD_CLEAN_TARGET,$(ARK_API_OUT)))
+
+# Register Python artifacts
+$(eval $(call ADD_CLEAN_TARGET,$(ARK_API_SERVICE_DIR)/__pycache__))
+$(eval $(call ADD_CLEAN_TARGET,$(ARK_API_SERVICE_DIR)/.pytest_cache))
+$(eval $(call ADD_CLEAN_TARGET,$(ARK_API_SERVICE_DIR)/dist))
+```
+
+When `make clean` is run, all registered paths are removed:
+```makefile
+# In the root Makefile
+.PHONY: clean
+clean: 
+	@rm -rf $(OUT) $(CLEAN_TARGETS)
+```
+
+## Creating a Custom Service Makefile
+
+To create a standalone Makefile for a new service that leverages the build system:
+
+```makefile
+# services/my-service/Makefile
+# Include helpers from two levels up
+include ../../helpers.mk
+
+SERVICE_NAME := my-service
+SERVICE_OUT := $(OUT)/$(SERVICE_NAME)
+
+# Register for cleanup
+$(eval $(call ADD_CLEAN_TARGET,$(SERVICE_OUT)))
+
+# Define targets
+.PHONY: build test
+
+build: $(SERVICE_OUT)/stamp-build # HELP: Build my-service
+$(SERVICE_OUT)/stamp-build: | $(OUT)
+	@mkdir -p $(dir $@)
+	# Build commands here
+	@touch $@
+
+test: # HELP: Test my-service
+	# Test commands here
+
+clean:
+	rm -rf $(SERVICE_OUT)
+```
+
+This approach allows services to:
+- Use common macros and variables from `helpers.mk`
+- Maintain consistency with the overall build system
+- Work independently with their own `make` commands
+- Integrate seamlessly when included in the main build
+
+## Parallelization
+
+The build system is designed for parallel execution. Stamp files ensure proper dependency ordering while allowing Make to parallelize independent targets:
+
+```bash
+# Build all services in parallel
+make -j8 services-build-all
+
+# Test libraries and services in parallel
+make -j8 test-all
+```
+
+## Cross-Service Dependencies
+
+When creating dependencies between services, you must use Make's secondary expansion feature (enabled in `helpers.mk` with `.SECONDEXPANSION:`). This is critical when one service depends on another service's stamp file.
+
+### Why Secondary Expansion is Needed
+
+Services are discovered and included dynamically using wildcard:
+```makefile
+SERVICE_BUILD_MKS := $(wildcard services/*/build.mk)
+```
+
+This means services are included in alphabetical order. If `ark-api` (included early) depends on `localhost-gateway` (included later), the variable `$(LOCALHOST_GATEWAY_STAMP_INSTALL)` won't be defined yet when `ark-api/build.mk` is processed.
+
+### Solution: Use Double-Dollar Syntax
+
+```makefile
+# Correct - uses secondary expansion (deferred resolution)
+$(ARK_API_STAMP_INSTALL): $(ARK_API_STAMP_BUILD) $$(LOCALHOST_GATEWAY_STAMP_INSTALL)
+
+# Wrong - variable may be empty at parse time
+$(ARK_API_STAMP_INSTALL): $(ARK_API_STAMP_BUILD) $(LOCALHOST_GATEWAY_STAMP_INSTALL)
+```
+
+With `$$`, Make stores the variable name and resolves it after all makefiles are loaded, ensuring the dependency works regardless of include order.
+
+### Example
+
+If `ark-dashboard` depends on both `ark-api` and `localhost-gateway`:
+```makefile
+$(ARK_DASHBOARD_STAMP_INSTALL): $(ARK_DASHBOARD_STAMP_BUILD) $$(ARK_API_STAMP_INSTALL) $$(LOCALHOST_GATEWAY_STAMP_INSTALL)
+```
+
+This ensures both dependencies are properly resolved even though the services are included in different orders.
+
+## Best Practices
+
+1. **Use stamp files** for all multi-step operations to enable proper dependency tracking
+2. **Use `$$` for cross-service dependencies** to handle dynamic include ordering
+3. **Register cleanup paths** using `ADD_CLEAN_TARGET` to maintain a clean workspace
+4. **Add HELP annotations** to user-facing targets for better discoverability
+5. **Avoid recursive make** where possible - use stamp dependencies instead
+6. **Keep phony targets simple** - delegate actual work to stamp file targets

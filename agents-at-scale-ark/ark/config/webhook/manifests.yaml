@@ -1,0 +1,232 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: mutating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-ark-mckinsey-com-v1alpha1-agent
+  failurePolicy: Fail
+  name: magent-v1.kb.io
+  rules:
+  - apiGroups:
+    - ark.mckinsey.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - agents
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-ark-mckinsey-com-v1alpha1-model
+  failurePolicy: Fail
+  name: mmodel-v1.kb.io
+  rules:
+  - apiGroups:
+    - ark.mckinsey.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - models
+  sideEffects: None
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-ark-mckinsey-com-v1alpha1-agent
+  failurePolicy: Fail
+  name: vagent-v1.kb.io
+  rules:
+  - apiGroups:
+    - ark.mckinsey.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - agents
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-ark-mckinsey-com-v1alpha1-evaluator
+  failurePolicy: Fail
+  name: vevaluator-v1alpha1.kb.io
+  rules:
+  - apiGroups:
+    - ark.mckinsey.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - evaluators
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-ark-mckinsey-com-v1alpha1-mcpserver
+  failurePolicy: Fail
+  name: vmcpserver-v1.kb.io
+  rules:
+  - apiGroups:
+    - ark.mckinsey.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - mcpserver
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-ark-mckinsey-com-v1alpha1-model
+  failurePolicy: Fail
+  name: vmodel-v1.kb.io
+  rules:
+  - apiGroups:
+    - ark.mckinsey.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - models
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-ark-mckinsey-com-v1alpha1-query
+  failurePolicy: Fail
+  name: vquery-v1.kb.io
+  rules:
+  - apiGroups:
+    - ark.mckinsey.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - queries
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-ark-mckinsey-com-v1alpha1-team
+  failurePolicy: Fail
+  name: vteam-v1.kb.io
+  rules:
+  - apiGroups:
+    - ark.mckinsey.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - teams
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-ark-mckinsey-com-v1alpha1-tool
+  failurePolicy: Fail
+  name: vtool-v1.kb.io
+  rules:
+  - apiGroups:
+    - ark.mckinsey.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - tools
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-ark-mckinsey-com-v1prealpha1-a2aserver
+  failurePolicy: Fail
+  name: va2aserver-v1prealpha1.kb.io
+  rules:
+  - apiGroups:
+    - ark.mckinsey.com
+    apiVersions:
+    - v1prealpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - a2aservers
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-ark-mckinsey-com-v1prealpha1-executionengine
+  failurePolicy: Fail
+  name: vexecutionengine-v1prealpha1.kb.io
+  rules:
+  - apiGroups:
+    - ark.mckinsey.com
+    apiVersions:
+    - v1prealpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - executionengines
+  sideEffects: None

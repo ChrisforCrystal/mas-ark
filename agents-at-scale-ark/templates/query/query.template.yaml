@@ -1,0 +1,13 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: {{ .Values.queryName }}-query
+  labels:
+    project: {{ .Values.projectName }}
+    type: sample
+    target: {{ .Values.targetType }}
+spec:
+  input: "{{ .Values.inputMessage }}"
+  targets:
+    - type: {{ .Values.targetType }}
+      name: {{ .Values.targetName }}-{{ .Values.targetType }}

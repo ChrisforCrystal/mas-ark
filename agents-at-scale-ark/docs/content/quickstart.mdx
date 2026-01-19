@@ -1,0 +1,56 @@
+---
+title: Getting Started
+---
+
+# Quickstart
+
+Ensure you have [Node.js](https://nodejs.org/en/download) and [Helm](https://helm.sh/docs/intro/install/) installed. Then run the following commands to install Ark:
+
+```bash
+# Install the 'ark' CLI:
+npm install -g @agents-at-scale/ark
+
+# Install Ark:
+ark install
+
+# Optionally configure a 'default' model to use for agents:
+ark models create default
+
+# Run the dashboard:
+ark dashboard
+```
+
+You will need a Kubernetes cluster to install Ark into, you can use [Minikube](https://minikube.sigs.k8s.io/docs/start), [Kind](https://kind.sigs.k8s.io/docs/user/quick-start/), [Docker Desktop](https://docs.docker.com/desktop/kubernetes/) or similar to run a local cluster, as well as at least 2 CPU and 4 GiB RAM available. The `install` command will warn if any required dependencies are missing.
+
+In most cases the default installation options will be sufficient. This will install the Ark dependencies, the controller, the APIs and the dashboard. You can optionally setup a `default` model that will be the default used by agents.
+
+To run in local development mode, which runs all components in a local Kubernetes cluster with live-reload, prvodies DNS to all services, allows to install additional services like Minio, use:
+
+```bash
+# Install devspace - live reload etc for services. Requires a k8s cluster, which
+# could be 'brew install minikube' or similar.
+brew install devspace
+
+# Run Ark in dev mode.
+devspace dev
+
+# Show available routes that can be accessed:
+devspace run routes
+
+# Output:
+# argo-workflows: http://argo.default.127.0.0.1.nip.io:8080/ (unavailable)
+# ark-api       : http://ark-api.default.127.0.0.1.nip.io:8080/ (unavailable)
+# ark-dashboard : http://127.0.0.1.nip.io:8080/ (unavailable)
+# ark-dashboard : http://dashboard.default.127.0.0.1.nip.io:8080/ (unavailable)
+# minio-console : http://minio.default.127.0.0.1.nip.io:8080/ (unavailable)
+```
+
+Detailed instructions on how to install specific componets, configure RBAC, setup CI/CD deployments and deploy to remote clusters are available in the [Deploying Ark](../operations-guide/deploying-ark) operations guide.
+
+## Installing Fark
+
+You can also install the [Fark](../developer-guide/cli-tools.mdx) (Fast Agentic Runtime Kit) CLI tool to manage agents, run queries and more.
+
+## Troubleshooting
+
+If you encounter any issues during installation, see the [Troubleshooting](../reference/troubleshooting) guide.

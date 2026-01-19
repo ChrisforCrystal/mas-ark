@@ -1,0 +1,6 @@
+goal:
+  name: math
+  version: v0.0.1
+  startpoint: Figure out if there is math to do
+  objective: |
+    Solve math problems

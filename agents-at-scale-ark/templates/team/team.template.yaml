@@ -1,0 +1,17 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Team
+metadata:
+  name: {{ .Values.teamName }}-team
+  labels:
+    project: {{ .Values.projectName }}
+    strategy: collaborative
+    tier: basic
+spec:
+  description: {{ .Values.teamName }} team for {{ .Values.projectName }} project
+
+  members:
+    - name: {{ .Values.agentName }}-agent
+      type: agent
+
+  # Sequential strategy for single-agent teams
+  strategy: "sequential"

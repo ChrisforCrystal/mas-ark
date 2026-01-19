@@ -1,0 +1,72 @@
+---
+title: MCP
+description: Model Context Protocol servers for standardized tool integration
+---
+# MCP Servers
+
+MCP (Model Context Protocol) Servers provide external integrations and capabilities for agents through a standardized protocol. They enable agents to interact with external systems, APIs, and services in a consistent way.
+
+MCP Servers act as bridges between agents and external systems, providing tools and resources that agents can use during their execution. They follow the Model Context Protocol specification for consistent integration.
+
+## Example YAML
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: MCPServer
+metadata:
+  name: github-mcp
+  namespace: default
+spec:
+  address:
+    valueFrom:
+      serviceRef:
+        name: github-mcp-server
+        namespace: default
+        port: http
+        path: mcp
+  transport: http
+  description: "GitHub repository operations via MCP protocol"
+```
+
+## Usage with Agents
+
+MCP servers are accessed through Tool resources, which agents then reference:
+
+**MCPServer** → **Tool** → **Agent**
+
+```yaml
+# Agent references MCP tools
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: github-agent
+spec:
+  prompt: You are a GitHub assistant with access to repository operations.
+  modelRef:
+    name: gpt-4-model
+  tools:
+    - type: mcp
+      name: github-get-repo  # References Tool that connects to MCP server
+```
+
+See [Tools](/reference/resources/tools) for creating Tool resources that connect to MCP servers.
+
+## Key Features
+
+- Standardized Model Context Protocol implementation
+- HTTP and stdio transport support
+- Service reference integration with Kubernetes
+- Secure credential management
+- Tool and resource discovery
+
+## Sample Resources
+
+See the [samples/mcp](https://github.com/mckinsey/agents-at-scale-ark/tree/main/samples/mcp) directory for additional examples including:
+- GitHub MCP server integration
+- Local MCP server setup
+- External MCP server configuration
+- MCP server with authentication
+
+---
+
+**Next**: Learn about [Tools](../tools) for creating custom agent capabilities.

@@ -1,0 +1,36 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: json-output-agent
+  namespace: default
+spec:
+  description: "Agent that returns structured JSON output"
+  prompt: "You are a helpful assistant that extracts information from text and returns it in a structured format."
+  modelRef:
+    name: gpt-4o-mini
+  outputSchema:
+    type: object
+    properties:
+      annual_report_analysis:
+        type: string
+        description: The final analysis text compiled by the research squad in markdown format with references to sections of the annual report used. No unrelated comments are present.
+      summary:
+        type: string
+        description: "A brief summary of the input"
+      entities:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+            type:
+              type: string
+              enum: ["person", "organization", "location", "other"]
+        description: "Named entities found in the input"
+      sentiment:
+        type: string
+        enum: ["positive", "negative", "neutral"]
+        description: "Overall sentiment of the input"
+    required: ["summary", "entities", "sentiment"]
+    additionalProperties: false

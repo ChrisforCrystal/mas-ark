@@ -1,0 +1,22 @@
+apiVersion: v2
+name: {{ .Values.mcpServerName }}
+description: {{ .Values.description }}
+type: application
+version: 0.1.0
+appVersion: "latest"
+keywords:
+  - mcp
+  - {{ .Values.mcpServerName }}
+  - proxy
+  - agent
+{{- if .Values.homeUrl }}
+home: {{ .Values.homeUrl }}
+{{- end }}
+{{- if .Values.sourceUrls }}
+sources:
+{{- range .Values.sourceUrls }}
+  - {{ . }}
+{{- end }}
+{{- end }}
+maintainers:
+  - name: {{ .Values.maintainerName | default "QBAF Team" }}

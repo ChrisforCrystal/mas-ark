@@ -1,0 +1,17 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Team
+metadata:
+  name: research-analysis-team-test
+  labels:
+    category: research
+    workflow: sequential
+    environment: test
+spec:
+  description: Sequential team for research and analysis workflow (test version with 2 agents)
+  members:
+    - name: researcher
+      type: agent
+    - name: analyst
+      type: agent
+  strategy: sequential
+  maxTurns: 2

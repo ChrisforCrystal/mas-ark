@@ -1,0 +1,11 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: test-agent
+spec:
+  modelRef:
+    name: test-model
+  prompt: |
+    You are a test agent for parameter validation.
+    Respond to queries by acknowledging the parameters you receive and validating they are correctly templated.
+    Keep responses concise but informative.

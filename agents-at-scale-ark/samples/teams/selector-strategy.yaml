@@ -1,0 +1,75 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: research-analyst
+spec:
+  description: Research and data analysis specialist
+  prompt: |
+    You are a research analyst. Your role is to gather information, analyze data,
+    and provide insights based on research findings. Be very brief and concise. Do not ask user any questions.
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: strategy-consultant
+spec:
+  description: Strategic planning and business advice expert
+  prompt: |
+    You are a strategy consultant. Your role is to provide strategic recommendations, business insights,
+    and help with decision-making. Be very brief and concise. Do not ask user any questions.
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: project-manager
+spec:
+  prompt: |
+    You are a project manager. Your role is to synthesize insights from the team and determine when the analysis is complete.
+    Make sure the analysis is complete and comprehensive. Do not ask user any questions. End the conversation immediately instead.
+
+  description: Project coordination
+  tools:
+    - name: terminate
+      type: built-in
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Team
+metadata:
+  name: consulting-team
+spec:
+  strategy: selector
+  description: AI consulting team with intelligent participant selection
+  members:
+    - name: research-analyst
+      type: agent
+    - name: strategy-consultant
+      type: agent
+    - name: technical-expert
+      type: agent
+  selector:
+    agent: project-manager
+    selectorPrompt: |
+      You are coordinating a consulting team. Select the most appropriate team member
+      to respond next based on the conversation flow and expertise needed.
+
+      Available roles:
+      {{.Roles}}
+      
+      Conversation history:
+      {{.History}}
+      
+      Choose from: {{.Participants}}
+
+      Always start with research-analyst, and follow by strategy-consultant.
+      Select project-manager expert after each turn. Do not select the same participant twice in a row.
+      Return only the exact name of the selected participant.
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: test-selector-query
+spec:
+  input: "We need to analyze the market opportunity for a new AI-powered analytics platform. What should be our approach?"
+  targets:
+    - name: consulting-team
+      type: team

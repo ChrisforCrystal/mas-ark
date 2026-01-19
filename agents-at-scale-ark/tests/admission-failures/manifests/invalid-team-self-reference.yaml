@@ -1,0 +1,9 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Team
+metadata:
+  name: invalid-team-self-reference
+spec:
+  strategy: sequential
+  members:
+  - type: team
+    name: invalid-team-self-reference  # Team cannot reference itself - should fail admission

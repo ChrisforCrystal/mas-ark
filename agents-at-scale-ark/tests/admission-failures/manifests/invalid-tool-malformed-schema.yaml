@@ -1,0 +1,9 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Tool
+metadata:
+  name: invalid-tool-malformed-schema
+spec:
+  type: http
+  inputSchema: "invalid json"  # Malformed JSON schema - should fail admission
+  http:
+    url: https://example.com

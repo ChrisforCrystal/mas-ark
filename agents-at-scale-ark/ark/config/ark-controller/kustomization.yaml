@@ -1,0 +1,8 @@
+resources:
+- ark-controller.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+images:
+- name: ark-controller
+  newName: ark-controller
+  newTag: latest

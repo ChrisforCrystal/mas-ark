@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Values.modelName }}-api-key
+type: Opaque
+stringData:
+  # Make sure to use
+  # export CLAUDE_API_KEY="key"
+  # envsubst < models/{{ .Values.modelName }}.yaml | kubectl apply -f -
+  apiKey: ${CLAUDE_API_KEY}
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Model
+metadata:
+  name: {{ .Values.modelName }}
+spec:
+  type: openai
+  model:
+    value: claude-opus-4-20250514
+  config:
+    openai:
+      baseUrl:
+        value: ${CLAUDE_BASE_URL}
+      apiKey:
+        valueFrom:
+          secretKeyRef:
+            name: {{ .Values.modelName }}-api-key
+            key: apiKey

@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ark-controller
+  namespace: ark-system
+  labels:
+    control-plane: ark-controller
+    app.kubernetes.io/name: ark
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/version: "0.1.22" # x-release-please-version
+spec:
+  selector:
+    matchLabels:
+      control-plane: ark-controller
+      app.kubernetes.io/name: ark
+  replicas: 1
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: ark-controller
+      labels:
+        control-plane: ark-controller
+        app.kubernetes.io/name: ark
+        app.kubernetes.io/version: "0.1.22" # x-release-please-version
+    spec:
+      securityContext:
+        # Projects are configured by default to adhere to the "restricted" Pod Security Standards.
+        # This ensures that deployments meet the highest security requirements for Kubernetes.
+        # For more details, see: https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted
+        runAsNonRoot: false
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - command:
+        - /manager
+        args:
+          - --leader-elect
+          - --health-probe-bind-address=:8081
+        image: controller:0.1.22 # x-release-please-version
+        imagePullPolicy: IfNotPresent
+        name: manager
+        env:
+        - name: VERSION
+          value: "0.1.22" # x-release-please-version
+        # Explicitly name the service for telemetry.
+        - name: OTEL_SERVICE_NAME
+          value: "ark-controller"
+        # We have a common name for OTEL enviroment variables configuration.
+        # If these variables are present, mount them. See Ark 101 docs.
+        envFrom:
+        - configMapRef:
+            name: otel-environment-variables
+            optional: true
+        - secretRef:
+            name: otel-environment-variables  
+            optional: true
+        ports: []
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - "ALL"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 8
+            memory: 2Gi
+            ephemeral-storage: 1Gi
+          requests:
+            cpu: 10m
+            memory: 64Mi
+            ephemeral-storage: 100Mi
+        volumeMounts: []
+      volumes: []
+      serviceAccountName: ark-controller
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 10

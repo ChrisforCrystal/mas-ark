@@ -1,0 +1,19 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: sample-agent
+spec:
+  prompt: You're helpful agent. Always add amazing to the output. Use tools available to help the user.
+  tools:
+    - type: custom
+      name: tool-add
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: sample-query
+spec:
+  targets:
+    - name: sample-agent
+      type: agent
+  input: Calculate 3+2.

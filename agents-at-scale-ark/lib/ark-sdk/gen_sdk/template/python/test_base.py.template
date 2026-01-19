@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+"""
+Generated unittest tests for ARK Kubernetes Client Classes
+
+Auto-generated from OpenAPI schema - do not edit manually.
+"""
+
+import unittest
+from unittest.mock import Mock, MagicMock, patch
+from typing import Dict, Any
+from kubernetes.client.rest import ApiException
+from ark_sdk.versions import ARKResourceClient
+
+
+class BaseTestCase(unittest.TestCase):
+    """Base test case with common fixtures"""
+    
+    def setUp(self):
+        """Set up test fixtures"""
+        # Mock Kubernetes API client
+        self.config_patcher = patch('kubernetes.config.load_kube_config')
+        self.incluster_patcher = patch('kubernetes.config.load_incluster_config')
+        self.api_client_patcher = patch('kubernetes.client.ApiClient')
+        self.custom_api_patcher = patch('kubernetes.client.CustomObjectsApi')
+        
+        self.config_patcher.start()
+        self.incluster_patcher.start()
+        mock_client = self.api_client_patcher.start()
+        mock_custom_api = self.custom_api_patcher.start()
+        
+        self.mock_client_instance = Mock()
+        self.mock_api_client = Mock()
+        mock_client.return_value = self.mock_client_instance
+        mock_custom_api.return_value = self.mock_api_client
+        
+        # Sample resource data
+        self.sample_resource_data = {
+            'apiVersion': 'test.io/v1',
+            'kind': 'TestResource',
+            'metadata': {
+                'name': 'test-resource',
+                'namespace': 'default'
+            },
+            'spec': {
+                'field1': 'value1',
+                'field2': 'value2'
+            }
+        }
+    
+    def tearDown(self):
+        """Clean up patches"""
+        self.config_patcher.stop()
+        self.incluster_patcher.stop()
+        self.api_client_patcher.stop()
+        self.custom_api_patcher.stop()
+
+
+class MockModel:
+    """Mock model class for testing"""
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+    
+    def model_dump(self, by_alias=True, exclude_unset=True):
+        result = {}
+        for key, value in self.__dict__.items():
+            if value is not None or not exclude_unset:
+                result[key] = value
+        return result
+    
+    def dict(self, by_alias=True, exclude_unset=True):
+        return self.model_dump(by_alias=by_alias, exclude_unset=exclude_unset)

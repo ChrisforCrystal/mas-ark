@@ -1,0 +1,6 @@
+name: ark-cli
+description: ARK command line chat interface to help user with status check and dashboard spin up
+supports:
+  - dev
+  - install
+  - uninstall

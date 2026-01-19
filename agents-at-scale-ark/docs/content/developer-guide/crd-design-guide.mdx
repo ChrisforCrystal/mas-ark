@@ -1,0 +1,377 @@
+---
+title: CRD Design Guidelines
+description: Best practices and patterns for designing Custom Resource Definitions in ARK
+---
+
+# CRD Design Guidelines
+
+Design patterns and conventions for ARK Custom Resource Definitions (core ontology).
+
+## Core Principles
+
+1. **Follow Kubernetes Patterns** - Study how Deployment, Service, Job, Pod, and other core resources are structured. Model ARK resources on these established patterns for consistency and familiarity
+2. **Low-level Abstractions** - Map to core Agentic runtime ontology
+3. **Declarative Intent** - Focus on desired state, not operations
+4. **Configuration Separation** - Keep use cases runtime configuration separate from core configuration
+5. **State Reconciliation** - Design for controller reconciliation loops
+6. **Lean Definitions** - Keep anything that can be inferred from CRDs out of core ontology
+7. **Common Resource Conventions** - Use singular names following Kubernetes patterns (e.g., Agent, Model, Query like Deployment, Service, Pod)
+
+## Standard Patterns
+
+### Learn from Kubernetes Core Resources
+Before designing new patterns, examine how Kubernetes core resources handle similar concepts:
+- **Deployment**: Spec/Status pattern, replicas, strategy configuration
+- **Service**: Selector-based targeting, multiple port definitions
+- **Job**: Completion tracking, parallelism, retry policies
+- **Pod**: Container specs, resource requirements, lifecycle hooks
+- **ConfigMap/Secret**: Data storage patterns, volume mounting
+
+### Type Naming
+- **`...Config`** - Embedded configuration structs
+- **`...Ref`** - References to other resources (like `secretKeyRef`, `configMapRef`)
+- **`...Spec`** - Desired state definition
+- **`...Status`** - Observed state tracking
+
+### Reuse Common Fields (api/`version`/common_types.go)
+```go
+// Parameters for request processing
+Parameters []Parameter `json:"parameters,omitempty"`
+
+// Selector configuration
+Selector *ResourceSelector `json:"selector,omitempty"`
+```
+
+## Templating Patterns
+
+ARK uses Go template syntax for dynamic content generation across resources. This provides a consistent approach for parameter substitution and data interpolation.
+
+### Template Data Structure
+
+Templates have access to a structured data context:
+
+```go
+templateData := map[string]any{
+    "input": inputData,           // User input data accessible as .input.fieldName
+    "parameterName": "value",     // Parameters accessible as .parameterName
+}
+```
+
+### Parameter Resolution
+
+Parameters support multiple value sources following Kubernetes patterns:
+
+```yaml
+parameters:
+  # Direct values
+  - name: environment
+    value: "production"
+
+  # ConfigMap references
+  - name: api_endpoint
+    valueFrom:
+      configMapKeyRef:
+        name: app-config
+        key: api-url
+
+  # Secret references
+  - name: api_token
+    valueFrom:
+      secretKeyRef:
+        name: api-secrets
+        key: token
+```
+
+### Template Syntax Examples
+
+#### Query Input Templates
+```yaml
+spec:
+  input: |
+    Process {{.operation}} request for {{.input.customer}}
+    Environment: {{.environment}}
+    API Token: {{.api_token}}
+  parameters:
+    - name: operation
+      value: "payment"
+    - name: environment
+      valueFrom:
+        configMapKeyRef:
+          name: app-config
+          key: current-env
+```
+
+#### HTTP Tool Body Templates
+```yaml
+spec:
+  http:
+    body: |
+      {
+        "channel": "{{.incident_channel}}",
+        "text": "*{{.input.severity}}* incident: {{.input.title}}",
+        "details": "{{.input.description}}"
+      }
+    bodyParameters:
+      - name: incident_channel
+        valueFrom:
+          configMapKeyRef:
+            name: slack-config
+            key: incidents-channel
+```
+
+### Template Best Practices
+
+1. **Use `.input.fieldName`** for user-provided data
+2. **Use `.parameterName`** for configuration values
+3. **Validate templates** during resource creation
+4. **Emit events** for template errors to aid debugging
+5. **Follow Go template syntax** for consistency
+
+## Validation
+
+### Declare Resource Annotations
+```go
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
+```
+
+### Use Field Validation
+```go
+// Required string fields
+// +kubebuilder:validation:Required
+// +kubebuilder:validation:MinLength=1
+
+// Enums for constrained values
+// +kubebuilder:validation:Enum=pending;running;done
+
+// Patterns for formats
+// +kubebuilder:validation:Pattern=^(0(\.[0-9]+)?|1(\.0+)?)$
+```
+
+## Configuration Patterns
+
+### Polymorphic Configuration
+
+Kubernetes uses two patterns for polymorphic configuration. Example Ark resources which are polymorphic are `Model` and `Tool`. Choose the approach that best fits your use case:
+
+#### Implicit Typing
+
+Field presence determines type - used by many core K8s resources:
+
+```yaml
+# PersistentVolume - storage backend types
+spec:
+  nfs: {...}                   # Type: NFS
+  # OR
+  awsElasticBlockStore: {...}  # Type: AWS EBS
+
+# Pod Volume - data source types  
+spec:
+  volumes:
+  - configMap: {...}           # Type: ConfigMap
+  # OR  
+  - secret: {...}              # Type: Secret
+
+# Probe - health check types
+livenessProbe:
+  httpGet: {...}               # Type: HTTP
+  # OR
+  exec: {...}                  # Type: exec command
+```
+
+#### Explicit Typing
+
+Explicit type field with matching config - also used by core K8s resources:
+
+```yaml
+# Service - service types
+spec:
+  type: LoadBalancer           # Explicit discriminator
+  loadBalancerIP: 1.2.3.4
+
+# Secret - data encoding types
+type: kubernetes.io/tls       # Explicit discriminator
+data:
+  tls.crt: {...}
+
+# ARK Tool - tool implementation types  
+spec:
+  type: mcp                    # Explicit discriminator
+  mcp:                         # Type-specific config
+    mcpServerRef: {...}
+    toolName: get_repository
+```
+
+Consider explicit typing when:
+
+- Types have overlapping configuration needs
+- Clear type identification is important
+- API evolution requires type versioning
+
+Consider implicit typing when:
+
+- Field names clearly indicate purpose
+- Types are mutually exclusive by design
+- Configuration structures are completely different
+
+## Derived Resources
+
+Some resources are created by controllers based on discovery or parent resource definitions, following established Kubernetes patterns.
+
+### Pattern Overview
+
+User creates parent resource → Controller discovers/generates child resources
+
+#### Example: Deployment → ReplicaSet
+```yaml
+# User creates (declarative intent)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  replicas: 3
+  template:
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.14.2
+
+---
+# Controller auto-generates (derived resource)
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: nginx-deployment-7848d4b86f
+  ownerReferences:                    # Links to parent
+  - kind: Deployment
+    name: nginx-deployment
+spec:
+  replicas: 3                         # Controller copies from parent
+  template:                           # Controller copies + modifies
+    metadata:
+      labels:
+        pod-template-hash: 7848d4b86f # Controller adds hash
+```
+
+#### Example: MCPServer → Tool
+```yaml
+# User creates (declarative intent)
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: MCPServer
+metadata:
+  name: filesys-server
+spec:
+  address: "http://mcp-filesystem-server:8080/mcp"
+
+---
+# Controller auto-generates (derived resource)
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Tool
+metadata:
+  name: filesys-server-read-file
+  ownerReferences:                    # Links to parent
+  - kind: MCPServer
+    name: filesys-server
+spec:
+  type: mcp
+  description: "Read file contents"   # Controller sets from discovery
+  inputSchema: {...}                 # Controller sets from discovery
+  mcp:
+    mcpServerRef:
+      name: filesys-server
+    toolName: read_file
+```
+
+### Key Characteristics
+- Controller creates the resource (not user-defined)
+- Controller populates spec fields from parent or discovery
+- ownerReferences establishes parent-child relationship
+- Garbage collection removes child when parent is deleted
+- Controller may add computed fields (like template hashes)
+
+## Status Patterns
+
+### Standard Status Structure
+```go
+type ResourceStatus struct {
+    // +kubebuilder:validation:Enum=pending;running;ready;error
+    Phase      string       `json:"phase,omitempty"`
+    Message    string       `json:"message,omitempty"`
+    TokenUsage *TokenUsage  `json:"tokenUsage,omitempty"`
+    TTL        *metav1.Duration `json:"ttl,omitempty"`
+}
+```
+
+### Phase Values
+Follow Kubernetes conventions for status phases:
+- **Job-like resources** (Query, Evaluation): `pending`, `running`, `succeeded`, `failed`
+- **Service-like resources** (Agent): `pending`, `ready`, `error`
+- **Consider standard conditions**: Use `Conditions []metav1.Condition` for detailed status when appropriate
+
+## Resource Structure Template
+
+```go
+// ResourceSpec defines the desired state
+type ResourceSpec struct {
+    Description string             `json:"description,omitempty"`
+    Config      ResourceConfig     `json:"config"`
+    Parameters  []Parameter        `json:"parameters,omitempty"`
+}
+
+type ResourceStatus struct {
+    Phase      string      `json:"phase,omitempty"`
+    Message    string      `json:"message,omitempty"`
+    TokenUsage *TokenUsage `json:"tokenUsage,omitempty"`
+}
+
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
+type Resource struct {
+    metav1.TypeMeta   `json:",inline"`
+    metav1.ObjectMeta `json:"metadata,omitempty"`
+    Spec              ResourceSpec   `json:"spec,omitempty"`
+    Status            ResourceStatus `json:"status,omitempty"`
+}
+
+// +kubebuilder:object:root=true
+type ResourceList struct {
+    metav1.TypeMeta `json:",inline"`
+    metav1.ListMeta `json:"metadata,omitempty"`
+    Items           []Resource `json:"items"`
+}
+
+func init() {
+    SchemeBuilder.Register(&Resource{}, &ResourceList{})
+}
+```
+
+## Best Practices
+
+### Required
+- Study relevant Kubernetes resources before designing new patterns
+- Use `Parameters []Parameter` for template processing
+- Include `TTL` and `TokenUsage` for lifecycle/observability
+- Use typed references (`...Ref` structs) instead of strings
+- Include appropriate kubebuilder validation
+- Manage owner references in controllers reconciliation for parent-child relationships
+- Follow Kubernetes field naming conventions (camelCase in JSON)
+
+### Avoid
+- Custom annotations (use status fields like Kubernetes does)
+- Hard-coded values (use `ValueSource` pattern from ConfigMap/Secret)
+- Missing validation annotations
+- Inconsistent naming patterns
+- Inventing patterns that conflict with established Kubernetes conventions
+
+## Breaking Changes
+
+When making breaking changes to CRD schemas or behavior:
+
+- Update the [Upgrade Guide](../../reference/upgrading) with a new version section documenting what changed and migration steps
+- Add an entry to [Troubleshooting](../../reference/troubleshooting) describing the error users will see and linking to the upgrade guide
+- Update relevant resource documentation in [Resources](../../reference/resources) to clarify new behavior
+
+See [Upgrading](../../reference/upgrading#v0134) and [Troubleshooting](../../reference/troubleshooting#agents) for v0.1.34 agent modelRef example.

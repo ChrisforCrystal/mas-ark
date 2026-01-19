@@ -1,0 +1,70 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: test-query-with-params
+spec:
+  input: |
+    Please analyze the following {{.data_type}} request:
+    
+    Customer: {{.customer_name}}
+    Environment: {{.environment}}
+    Analysis Method: {{.analysis_method}}
+    Priority Level: {{.priority_level}}
+    
+    Data Source: {{.data_source}}
+    API Endpoint: {{.api_endpoint}}
+    Access Key: {{.access_key}}
+    
+    Additional Context: {{.context_info}}
+    
+    Please confirm that you received all these parameters correctly and provide a brief analysis summary.
+  
+  parameters:
+    # Direct value parameters
+    - name: data_type
+      value: "performance"
+    - name: customer_name
+      value: "Test Customer Corp"
+    
+    # ConfigMap reference parameters
+    - name: environment
+      valueFrom:
+        configMapKeyRef:
+          name: query-config
+          key: environment
+    - name: analysis_method
+      valueFrom:
+        configMapKeyRef:
+          name: query-config
+          key: analysis_method
+    - name: priority_level
+      valueFrom:
+        configMapKeyRef:
+          name: query-config
+          key: priority_level
+    - name: data_source
+      valueFrom:
+        configMapKeyRef:
+          name: query-config
+          key: data_source
+    
+    # Secret reference parameters
+    - name: api_endpoint
+      valueFrom:
+        secretKeyRef:
+          name: query-secrets
+          key: api_endpoint
+    - name: access_key
+      valueFrom:
+        secretKeyRef:
+          name: query-secrets
+          key: access_key
+    - name: context_info
+      valueFrom:
+        secretKeyRef:
+          name: query-secrets
+          key: context_info
+  
+  target:
+    type: agent
+    name: test-agent

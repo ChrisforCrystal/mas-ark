@@ -1,0 +1,183 @@
+name: "Deploy ARK Services"
+description: "Deploy ark-api and ark-dashboard Helm charts, verify deployment and apply ingress. Caller must provide kube credentials and helm installed."
+inputs:
+  clean_version:
+    description: "Clean version used as image tag (e.g. 0.1.2)"
+    required: true
+  image_registry:
+    description: "Image registry prefix (e.g. ghcr.io/org/repo). Action will append /ark-api, /ark-dashboard"
+    required: false
+    default: ""
+  install_loadbalancer:
+    description: "Whether to install nginx ingress controller and setup ARK ingress (true/false)"
+    required: false
+    default: "true"
+  load_balancer_annotations:
+    description: "Additional annotations for the LoadBalancer service (e.g. load-balancer-scheme)"
+    required: false
+    default: ""
+  namespace:
+    description: "Kubernetes namespace to deploy services into"
+    required: false
+    default: "default"
+  pull_policy:
+    description: "Image pull policy"
+    required: false
+    default: "IfNotPresent"
+  services_list:
+    description: "Space-separated list of services to deploy (default: ark-api ark-dashboard)"
+    required: false
+    default: "ark-api ark-dashboard"
+  timeout:
+    description: "Helm timeout for each release (e.g. 5m)"
+    required: false
+    default: "5m"
+  auth_mode:
+    description: "Authentication mode (open, sso, basic, hybrid)"
+    required: false
+    default: "open"
+  oidc_issuer_url:
+    description: "OIDC issuer URL"
+    required: false
+    default: ""
+  oidc_client_id:
+    description: "OIDC client ID"
+    required: false
+    default: ""
+  oidc_client_secret:
+    description: "OIDC client secret"
+    required: false
+    default: ""
+  oidc_provider_id:
+    description: "OIDC provider ID (used in callback URL)"
+    required: false
+    default: ""
+  oidc_provider_name:
+    description: "OIDC provider display name"
+    required: false
+    default: ""
+  dashboard_base_url:
+    description: "Dashboard base URL (e.g. https://ark.example.com)"
+    required: false
+    default: ""
+  auth_secret:
+    description: "Secret key for signing JWT tokens"
+    required: false
+    default: ""
+runs:
+  using: "composite"
+  steps:
+    - name: Install ingresses
+      if: ${{ inputs.install_ingress == 'true' }}
+      shell: bash
+      run: |
+        echo "Setting up ingress and load balancer"
+        set -euo pipefail
+        # Install nginx ingress controller
+        echo "Installing nginx ingress controller..."
+        helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+        helm repo update
+        helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+            --namespace ingress-nginx \
+            --create-namespace \
+            --set controller.service.type=LoadBalancer \
+            --set controller.config.proxy-buffer-size="16k" \
+            --set controller.config.proxy-buffers-number="4" \
+            --set controller.config.large-client-header-buffers="4 16k" \
+            $( [ -n "${{ inputs.load_balancer_annotations }}" ] && echo "--set controller.service.annotations={${{ inputs.load_balancer_annotations }}}" ) \
+            --wait
+        
+        # Wait for external IP
+        echo "Waiting for external IP assignment..."
+        kubectl wait --namespace ingress-nginx \
+            --for=condition=ready pod \
+            --selector=app.kubernetes.io/component=controller \
+            --timeout=300s
+
+    - name: Deploy services
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "=== Deploying additional ARK services ==="
+        for NAME in ${{ inputs.services_list }}; do
+
+          # compute image repository per service
+          IMAGE_REPO_INPUT="${{ inputs.image_registry }}"
+          if [ -n "${IMAGE_REPO_INPUT}" ]; then
+            IMAGE_REPO="${IMAGE_REPO_INPUT}/${NAME}"
+          else
+            IMAGE_REPO="${NAME}"
+          fi
+
+          # Build extra helm args for ark-dashboard OIDC configuration
+          EXTRA_ARGS=()
+          VALUES_FILE=""
+          if [ "${NAME}" = "ark-dashboard" ]; then
+            VALUES_FILE=$(mktemp)
+            cat > "${VALUES_FILE}" <<EOF
+        app:
+          env:
+            - name: AUTH_MODE
+              value: "${{ inputs.auth_mode }}"
+            - name: BASE_URL
+              value: "${{ inputs.dashboard_base_url }}"
+            - name: AUTH_URL
+              value: "${{ inputs.dashboard_base_url }}/api/auth"
+            - name: AUTH_SECRET
+              value: "${{ inputs.auth_secret }}"
+            - name: OIDC_ISSUER_URL
+              value: "${{ inputs.oidc_issuer_url }}"
+            - name: OIDC_CLIENT_ID
+              value: "${{ inputs.oidc_client_id }}"
+            - name: OIDC_CLIENT_SECRET
+              value: "${{ inputs.oidc_client_secret }}"
+            - name: OIDC_PROVIDER_NAME
+              value: "${{ inputs.oidc_provider_name }}"
+            - name: OIDC_PROVIDER_ID
+              value: "${{ inputs.oidc_provider_id }}"
+        EOF
+            EXTRA_ARGS+=(--values "${VALUES_FILE}")
+          fi
+
+          echo "=== Deploying ${NAME} ==="
+          helm upgrade --install "${NAME}" "services/${NAME}/chart" \
+            --namespace "${{ inputs.namespace }}" \
+            --create-namespace \
+            --set app.image.repository="${IMAGE_REPO}" \
+            --set app.image.tag="${{ inputs.clean_version }}" \
+            --set app.image.pullPolicy="${{ inputs.pull_policy }}" \
+            "${EXTRA_ARGS[@]}" \
+            --wait \
+            --timeout="${{ inputs.timeout }}"
+
+          # Cleanup temp file
+          if [ -n "${VALUES_FILE}" ] && [ -f "${VALUES_FILE}" ]; then
+            rm -f "${VALUES_FILE}"
+          fi
+        done
+
+    - name: Verify deployment
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "=== Checking deployment status ==="
+        echo "ARK Controller:"
+        if ! kubectl get pods -n ark-system -l control-plane=ark-controller; then
+          echo "Controller not found, showing all ark-system pods:"
+          kubectl get pods -n ark-system || true
+        fi
+        echo "ARK Services:"
+        for NAME in ${{ inputs.services_list }}; do
+          echo "${NAME}:"
+          kubectl get pods -n "${{ inputs.namespace }}" -l app="${NAME}" || true
+        done
+        echo "Service endpoints:"
+        kubectl get svc -n "${{ inputs.namespace }}" ${{ inputs.services_list }} || true
+
+    - name: Setup ARK ingress
+      shell: bash
+      run: |
+        set -euo pipefail
+        # Create ingress resource for ARK services
+        kubectl apply -f ark/scripts/ark_ingress.yml || true
+        echo "Ingress controller deployed"

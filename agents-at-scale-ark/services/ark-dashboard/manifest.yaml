@@ -1,0 +1,15 @@
+name: ark-dashboard
+description: Simple dashboard for managing and monitoring ARK layer
+supports:
+  - dev
+  - install
+  - uninstall
+  - build-test
+post-install-instructions: |
+  Check the dashboard routes with:
+  - make status
+commands:
+  install:
+    - make ark-dashboard-install
+  dev:
+    - make ark-dashboard-dev

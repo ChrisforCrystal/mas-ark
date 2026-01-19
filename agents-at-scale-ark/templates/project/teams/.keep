@@ -1,0 +1,11 @@
+# Additional Teams
+
+Add your custom teams here alongside the provided sample-team.yaml example.
+
+Each team should be a separate YAML file:
+```
+teams/
+├── sample-team.yaml      # Example provided
+├── my-team.yaml          # Your custom team
+└── another-team.yaml     # Another custom team
+```

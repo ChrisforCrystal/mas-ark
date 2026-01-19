@@ -1,0 +1,11 @@
+# Additional Agents
+
+Add your custom agents here alongside the provided sample-agent.yaml example.
+
+Each agent should be a separate YAML file:
+```
+agents/
+├── sample-agent.yaml     # Example provided
+├── my-agent.yaml         # Your custom agent
+└── another-agent.yaml    # Another custom agent
+```

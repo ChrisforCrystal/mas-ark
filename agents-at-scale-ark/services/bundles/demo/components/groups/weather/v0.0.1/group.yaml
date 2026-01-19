@@ -1,0 +1,6 @@
+group:
+  name: weather
+  version: v0.0.1
+  goal_ref: weather@v0.0.1
+  squads:
+    - squad_ref: weather-team@v0.0.1

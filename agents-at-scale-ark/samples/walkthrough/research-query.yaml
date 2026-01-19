@@ -1,0 +1,12 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: research-query
+  labels:
+    category: research
+    use-case: walkthrough
+spec:
+  input: "Research the latest trends in artificial intelligence and machine learning for 2024, focusing on enterprise applications and business impact."
+  target:
+    type: team
+    name: research-analysis-team

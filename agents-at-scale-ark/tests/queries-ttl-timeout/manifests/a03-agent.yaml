@@ -1,0 +1,8 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: test-math
+spec:
+  modelRef:
+    name: test-model-openai
+  prompt: You're a test agent helping with calculations.

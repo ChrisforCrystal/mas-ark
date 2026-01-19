@@ -1,0 +1,66 @@
+{{- if .Values.serviceAccount.create -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.serviceAccount.name }}
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    {{- with .Values.global.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Values.serviceAccount.name }}-role
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    {{- with .Values.global.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+rules:
+  # Core resources for Helm releases and events
+  - apiGroups: [""]
+    resources: ["secrets", "events"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+  # Permission to read configmaps to load ark-config-streaming configuration
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list"]
+  # Permission to read services to get the address of the configured streaming service
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get", "list"]
+  # Gateway API resources
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["httproutes", "gateways"]
+    verbs: ["get", "list"]
+  # Ark resources
+  - apiGroups: ["ark.mckinsey.com"]
+    resources: ["models", "agents", "queries", "teams", "tools", "workflows", "arktemplates", "mcpservers", "a2aservers", "memories", "evaluations", "evaluators", "a2atasks"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Argo Workflows resources
+  - apiGroups: ["argoproj.io"]
+    resources: ["workflows", "workflowtemplates", "cronworkflows", "clusterworkflowtemplates"]
+    verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Values.serviceAccount.name }}-binding
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    {{- with .Values.global.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.serviceAccount.name }}
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: Role
+  name: {{ .Values.serviceAccount.name }}-role
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}

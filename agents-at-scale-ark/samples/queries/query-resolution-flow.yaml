@@ -1,0 +1,82 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: query-resolution-flow
+  annotations:
+    example.com/description: "Demonstrates parameter resolution flow with ConfigMaps and Secrets"
+spec:
+  input: |
+    Process {{.operation}} request:
+    - Customer: {{.customer_name}}
+    - Environment: {{.env}}
+    - API Token: {{.api_token}}
+    - Timeout: {{.timeout}}s
+  parameters:
+    # Direct value parameter
+    - name: operation
+      value: "payment"
+    # Parameter from ConfigMap
+    - name: customer_name
+      valueFrom:
+        configMapKeyRef:
+          name: customer-config
+          key: primary-customer
+    # Parameter from ConfigMap (environment-specific)
+    - name: env
+      valueFrom:
+        configMapKeyRef:
+          name: deployment-config
+          key: current-environment
+    # Sensitive parameter from Secret
+    - name: api_token
+      valueFrom:
+        secretKeyRef:
+          name: api-credentials
+          key: payment-token
+    # Configuration parameter from ConfigMap
+    - name: timeout
+      valueFrom:
+        configMapKeyRef:
+          name: app-config
+          key: request-timeout
+  target:
+    type: agent
+    name: payment-processor
+---
+# Supporting ConfigMap for customer configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: customer-config
+data:
+  primary-customer: "Acme Corporation"
+  secondary-customer: "Beta Industries"
+---
+# Supporting ConfigMap for deployment configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: deployment-config
+data:
+  current-environment: "production"
+  fallback-environment: "staging"
+---
+# Supporting ConfigMap for application configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  request-timeout: "30"
+  retry-count: "3"
+---
+# Supporting Secret for sensitive credentials
+apiVersion: v1
+kind: Secret
+metadata:
+  name: api-credentials
+type: Opaque
+data:
+  # Base64 encoded values (example only)
+  payment-token: cGF5bWVudC10b2tlbi0xMjM0NQ==  # "payment-token-12345"
+  backup-token: YmFja3VwLXRva2VuLTY3ODkw     # "backup-token-67890"

@@ -1,0 +1,23 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Model
+metadata:
+  # The 'default' model is used by agents if they do not have a model explicitly
+  # set.
+  name: default
+spec:
+  type: azure
+  model:
+    value: gpt-4.1-mini
+  config:
+    azure:
+      baseUrl:
+        value: "https://lxo.openai.azure.com"
+      apiKey:
+        valueFrom:
+          secretKeyRef:
+            # This secret is created by following the setup instructions in the README
+            name: default-model-token
+            key: token
+      apiVersion:
+        value: "2024-12-01-preview" 
+

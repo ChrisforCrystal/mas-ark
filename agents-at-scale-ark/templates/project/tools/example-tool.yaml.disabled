@@ -1,0 +1,94 @@
+# Example Tool Definition
+# Rename this file to example-tool.yaml to enable it
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "{{ .Values.projectName }}.fullname" . }}-example-tool
+  labels:
+    {{- include "{{ .Values.projectName }}.labels" . | nindent 4 }}
+    component: tool
+    tool: example-tool
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "{{ .Values.projectName }}.selectorLabels" . | nindent 6 }}
+      component: tool
+      tool: example-tool
+  template:
+    metadata:
+      labels:
+        {{- include "{{ .Values.projectName }}.selectorLabels" . | nindent 8 }}
+        component: tool
+        tool: example-tool
+    spec:
+      {{- with .Values.security.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: example-tool
+        image: "{{ .Values.image.registry }}/{{ .Values.project.name }}-example-tool:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        {{- with .Values.security.securityContext }}
+        securityContext:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+        env:
+        - name: PORT
+          value: "8000"
+        - name: TOOL_NAME
+          value: "example-tool"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "{{ .Values.projectName }}.fullname" . }}-example-tool
+  labels:
+    {{- include "{{ .Values.projectName }}.labels" . | nindent 4 }}
+    component: tool
+    tool: example-tool
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8000
+    targetPort: http
+    protocol: TCP
+    name: http
+  selector:
+    {{- include "{{ .Values.projectName }}.selectorLabels" . | nindent 4 }}
+    component: tool
+    tool: example-tool
+
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: MCPServer
+metadata:
+  name: example-tool
+  labels:
+    {{- include "{{ .Values.projectName }}.labels" . | nindent 4 }}
+    component: mcpserver
+    tool: example-tool
+spec:
+  address:
+    valueFrom:
+      serviceRef:
+        name: {{ include "{{ .Values.projectName }}.fullname" . }}-example-tool
+        port: 8000
+        path: /mcp
+  transport: sse
+  timeout: 30s
+  description: "Example tool for demonstration purposes"

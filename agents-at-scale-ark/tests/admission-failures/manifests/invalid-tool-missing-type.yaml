@@ -1,0 +1,13 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Tool
+metadata:
+  name: invalid-tool-missing-type
+spec:
+  # Missing required 'type' field - should fail admission
+  inputSchema:
+    type: object
+    properties:
+      url:
+        type: string
+  http:
+    url: https://example.com

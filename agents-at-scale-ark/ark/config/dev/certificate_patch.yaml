@@ -1,0 +1,10 @@
+# This patch configures webhook service as ExternalName to host.docker.internal:8081
+- op: remove
+  path: /spec/dnsNames
+
+- op: add
+  path: /spec/dnsNames
+  value:
+    - host.docker.internal
+    - ark-webhook-service.default.svc
+

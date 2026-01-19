@@ -1,0 +1,53 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: test-query-ttl-timeout
+spec:
+  steps:
+    - try:
+      - script:
+          skipLogOutput: true
+          content: |
+            set -u
+            echo "{\"token\": \"$E2E_TEST_AZURE_OPENAI_KEY\", \"url\": \"$E2E_TEST_AZURE_OPENAI_BASE_URL\"}"
+          outputs:
+          - name: azure
+            value: (json_parse($stdout))
+      - script:
+          content: |
+            helm install ark-tenant ../../charts/ark-tenant --namespace $NAMESPACE --create-namespace --wait
+          env:
+          - name: NAMESPACE
+            value: ($namespace)
+      - apply:
+          file: "manifests/*.yaml"
+      - assert:
+          resource:
+            apiVersion: ark.mckinsey.com/v1alpha1
+            kind: Model
+            metadata:
+              name: test-model-openai
+            status:
+              conditions:
+              - type: ModelAvailable
+                status: "True"
+      - assert:
+          resource:
+            apiVersion: ark.mckinsey.com/v1alpha1
+            kind: Agent
+            metadata:
+              name: test-math
+      - assert:
+          resource:
+            apiVersion: ark.mckinsey.com/v1alpha1
+            kind: Query
+            metadata:
+              name: test-query-math-timeout
+            status:
+              (phase == 'done' || phase == 'error'): true
+      catch:
+      - events: {}
+      - describe:
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          name: test-query-math-ttl

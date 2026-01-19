@@ -1,0 +1,13 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Tool
+metadata:
+  name: invalid-tool-fetcher-missing-url
+spec:
+  type: http
+  inputSchema:
+    type: object
+    properties:
+      param:
+        type: string
+  http:
+    method: GET  # Missing required URL - should fail admission

@@ -1,0 +1,30 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: agent-seq
+spec:
+  prompt: Append "Bazinga!" to the user input and say it.
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Team
+metadata:
+  name: team-seq
+spec:
+  members:
+    - name: agent-seq
+      type: agent
+    - name: agent-seq
+      type: agent
+    - name: agent-seq
+      type: agent
+  strategy: "sequential"
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: query-seq
+spec:
+  input: "Sheldon says:"
+  target:
+    type: team
+    name: team-seq

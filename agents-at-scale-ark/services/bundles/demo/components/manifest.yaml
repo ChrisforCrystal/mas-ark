@@ -1,0 +1,8 @@
+components:
+  manifest_version: "0.1"
+  metadata:
+    name: aas-demo
+    compatibility_level: '3.1'
+    version: 'v0.0.1'
+    author: A@S Team
+    description: Demo bundle

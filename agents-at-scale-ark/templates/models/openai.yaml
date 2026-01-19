@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Values.modelName }}-secret
+type: Opaque
+stringData:
+  # Make sure to use
+  # export OPENAI_API_KEY="key"
+  # envsubst < models/{{ .Values.modelName }}.yaml | kubectl apply -f -
+  token: ${OPENAI_API_KEY}
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Model
+metadata:
+  name: {{ .Values.modelName }}
+spec:
+  type: openai
+  model:
+    value: gpt-4.1-mini
+  config:
+    openai:
+      properties:
+        temperature:
+          value: "0.7"
+        max_tokens:
+          value: "2000"
+        top_p:
+          value: "0.95"
+        logprobs:
+          value: "true"
+        top_logprobs:
+          value: "5"
+      baseUrl:
+        value: ${OPENAI_BASE_URL}
+      apiKey:
+        valueFrom:
+          secretKeyRef:
+            name: {{ .Values.modelName }}-secret
+            key: token

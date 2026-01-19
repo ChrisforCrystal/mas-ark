@@ -1,0 +1,27 @@
+# Minimal kustomization for kubebuilder helm chart generation
+# This file is required for 'make chart' to work properly
+
+namespace: ark-system
+
+resources:
+- ../crd
+- ../rbac
+- ../manager
+- ../webhook
+- ../certmanager
+
+# Patches required for proper metrics and webhook functionality
+patches:
+- path: manager_metrics_patch.yaml
+  target:
+    kind: Deployment
+- path: manager_webhook_patch.yaml
+  target:
+    kind: Deployment
+- path: cert_metrics_manager_patch.yaml
+  target:
+    kind: Deployment
+- path: webhook_service_patch.yaml
+  target:
+    kind: Service
+    name: webhook-service

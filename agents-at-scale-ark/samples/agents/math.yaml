@@ -1,0 +1,6 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: math
+spec:
+  prompt: You're an agent helping with calculations.

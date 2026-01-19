@@ -1,0 +1,91 @@
+# Services
+
+ARK provides a rich ecosystem of services that extend the platform's capabilities. These services are modular, Kubernetes-native components that can be installed and configured as needed.
+
+## Installing Services
+
+Use `make services` to install and configure additional service capabilities. The command will scan for services with manifest files and let you choose to install, run in dev mode, or uninstall each service.
+
+```bash
+make services
+```
+
+## Service Manifest Format
+
+Each service must include a `manifest.yaml` file that describes the service and its capabilities:
+
+```yaml
+name: ark-broker
+description: In-memory storage with streaming support
+supports:
+  - dev
+  - install
+  - uninstall
+post-install-instructions: |
+  Service is now running at: http://ark-broker:8080
+```
+
+The `post-install-instructions` field is optional and will be displayed after successful installation.
+
+## Service Commands
+
+Services follow a standard idiom using Make targets:
+
+- `make <service-name>-dev` - Run the service in development mode locally
+- `make <service-name>-install` - Build the container, push to cluster registry, and deploy using Helm
+- `make <service-name>-uninstall` - Remove the service deployment from the cluster
+
+The `install` command uses the `scripts/build-and-push.sh` helper to build and push container images to the cluster registry, then deploys the service using Helm charts.
+
+## Exposing Services
+
+Services are exposed through Kubernetes Gateway API using HTTPRoute resources. The ARK quickstart sets up a gateway that services can use for external access.
+
+Individual services can also be exposed using `kubectl port-forward` (as shown in post-install instructions).
+
+## Available Services
+
+### Core Services
+
+- [ARK Broker](/developer-guide/services/ark-broker) - In-memory storage with SSE streaming support
+- [Execution Engine](/developer-guide/langchain-execution-engine) - Framework adapter for Langchain and other AI frameworks
+
+### ARK API Services
+
+**ARK API** includes the A2A Gateway functionality for agent-to-agent communication. See [ARK API](/developer-guide/services/ark-api) for complete documentation including:
+- Native ARK REST APIs
+- OpenAI-compatible endpoints
+- A2A Gateway endpoints for agent-to-agent communication
+
+### Execution Engines
+- **Langchain Execution Engine** - Framework adapter for Langchain workflows
+
+### Development Tools
+- **[ARK Dashboard](/developer-guide/ark-dashboard)** - Next.js-based web interface for ARK management
+- **ARK API** - REST API for managing ARK resources
+
+### Specialized Services
+- **Evaluator LLM** - AI-powered query evaluation service using LLM-as-a-Judge
+- **Evaluation Operator** - Automated evaluation and scoring of agent responses  
+
+## Service Discovery and Annotations
+
+ARK services use a standardized annotation system for discovery and integration:
+
+### Service Annotations
+
+Helm Charts can be annotated to provide metadata for discovery:
+
+```yaml
+# Chart.yaml
+annotations:
+  ark.mckinsey.com/service: "my-service"
+  ark.mckinsey.com/resources: "service,deployment"
+```
+
+### Annotation Schema
+
+| Annotation | Description | Example |
+|------------|-------------|---------|
+| `ark.mckinsey.com/service` | Service identifier for ARK discovery | `langfuse` |
+| `ark.mckinsey.com/resources` | Resource types created by chart | `service,a2aserver` |

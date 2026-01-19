@@ -1,0 +1,27 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: {{ .Values.agentName }}-agent
+  labels:
+    project: {{ .Values.projectName }}
+    role: assistant
+    tier: basic
+spec:
+  description: {{ .Values.agentName }} agent for {{ .Values.projectName }} project
+  prompt: |
+    You are a helpful AI assistant for the {{ .Values.projectName }} project. You provide clear, concise, and accurate responses to user questions.
+
+    Key guidelines:
+    - Be direct and to the point
+    - Use simple language when possible
+    - If you don't know something, say so
+    - Always be polite and professional
+
+  # Reference to model (will be created by Helm chart)
+  modelRef:
+    name: default
+
+  # Optional: Add built-in tools
+  tools:
+    - type: built-in
+      name: terminate

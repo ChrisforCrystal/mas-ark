@@ -1,0 +1,7 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: invalid-query-no-targets-or-selector
+spec:
+  input: Test query
+  # Missing both targets and selector - should fail admission

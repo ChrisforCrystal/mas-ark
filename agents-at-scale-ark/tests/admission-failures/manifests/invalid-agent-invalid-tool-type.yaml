@@ -1,0 +1,11 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: invalid-agent-invalid-tool-type
+spec:
+  prompt: Test agent
+  modelRef:
+    name: nonexistent-model
+  tools:
+  - type: invalid-type  # Invalid tool type - should fail admission
+    name: test-tool

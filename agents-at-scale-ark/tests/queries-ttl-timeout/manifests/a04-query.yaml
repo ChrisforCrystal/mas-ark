@@ -1,0 +1,10 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: test-query-math-timeout
+spec:
+  input: "What is 2+2*7+9? Give good explanation"
+  target:
+    type: agent
+    name: test-math
+  timeout: "1s"

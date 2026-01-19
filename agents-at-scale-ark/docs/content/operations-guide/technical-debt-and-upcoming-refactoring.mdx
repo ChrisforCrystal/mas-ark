@@ -1,0 +1,15 @@
+# Technical Debt and Upcoming Refactoring
+
+Some elements of ARK have been used for experimenting with different concepts, allthough the bulk of the code is what is being incrementally pulled from differnet teams who have been building platforms.
+
+In the spirit of transparency, what we currently consider as material techincal debt that will be refactored (in some cases, extensively) is documented here.
+
+The purpose of this list is to advise contribuors on areas to avoid focusing on as they will be significantly updated.
+
+## Technical Debt Report 2025-08-20
+
+Non-exhaustive. This work feeds into the roadmap and does not include new features, or more incremental improvements.
+
+**ExecutionEngines** - will likely be replaced by `QueryResolver`, gPRC engine that can resolve `Query` objects, across all targets. Usage of `ExecutionEngine` is discouraged.
+
+**Ark Query Execution Engine** - will be extracted from `ark-controller` so that query execution is isolated from the K8S controller and can be scaled horizontally, tested independently, etc.

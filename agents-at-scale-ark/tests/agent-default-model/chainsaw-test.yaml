@@ -1,0 +1,168 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: agent-default-model
+spec:
+  description: Test agent behavior with and without default model
+  steps:
+  - name: test-without-default-model
+    try:
+    - apply:
+        resource:
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Agent
+          metadata:
+            name: agent-no-default-model
+          spec:
+            prompt: |
+              You are a test agent created without a default model.
+    - assert:
+        resource:
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Agent
+          metadata:
+            name: agent-no-default-model
+          spec:
+            modelRef:
+              name: default
+    - assert:
+        resource:
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Agent
+          metadata:
+            name: agent-no-default-model
+          status:
+            conditions:
+            - type: Available
+              status: "False"
+              reason: ModelNotFound
+    catch:
+    - events: {}
+    - describe:
+        apiVersion: ark.mckinsey.com/v1alpha1
+        kind: Agent
+        name: agent-no-default-model
+
+  - name: setup-mock-service
+    try:
+    - script:
+        content: |
+          helm install ark-tenant ../../charts/ark-tenant --namespace $NAMESPACE --create-namespace --wait
+        env:
+        - name: NAMESPACE
+          value: ($namespace)
+    - apply:
+        file: manifests/a00-mock-openai.yaml
+    - assert:
+        resource:
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: mock-openai
+          status:
+            phase: Running
+            (contains(conditions[?type == 'Ready'].status, 'True')): true
+    catch:
+    - events: {}
+    - describe:
+        apiVersion: v1
+        kind: Pod
+        name: mock-openai
+
+  - name: create-default-model
+    try:
+    - script:
+        content: |
+          kubectl apply -f - <<EOF
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Model
+          metadata:
+            name: default
+            namespace: $NAMESPACE
+          spec:
+            type: completions
+            provider: openai
+            model:
+              value: gpt-4.1
+            pollInterval: 3s
+            config:
+              openai:
+                baseUrl:
+                  value: http://mock-openai.$NAMESPACE.svc.cluster.local/v1
+                apiKey:
+                  value: mock-api-key
+          EOF
+    - assert:
+        resource:
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Model
+          metadata:
+            name: default
+          status:
+            conditions:
+            - type: ModelAvailable
+              status: "True"
+    catch:
+    - events: {}
+    - describe:
+        apiVersion: ark.mckinsey.com/v1alpha1
+        kind: Model
+        name: default
+
+  - name: create-agent-and-query
+    try:
+    - apply:
+        file: manifests/a0[3-4]-*.yaml
+    - assert:
+        resource:
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Agent
+          metadata:
+            name: agent-no-model
+          spec:
+            modelRef:
+              name: default
+    - assert:
+        resource:
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Agent
+          metadata:
+            name: agent-no-model
+          status:
+            conditions:
+            - type: Available
+              status: "True"
+    catch:
+    - events: {}
+    - describe:
+        apiVersion: ark.mckinsey.com/v1alpha1
+        kind: Agent
+        name: agent-no-model
+
+  - name: verify-query-completion
+    try:
+    - assert:
+        resource:
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            name: default-model-query
+          status:
+            (conditions[?type == 'Completed']):
+            - status: 'True'
+    - assert:
+        resource:
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            name: default-model-query
+          status:
+            (response != null): true
+            (response.target.name): 'agent-no-model'
+            (response.content): 'Please confirm you are working'
+    catch:
+    - events: {}
+    - describe:
+        apiVersion: ark.mckinsey.com/v1alpha1
+        kind: Query
+        name: default-model-query

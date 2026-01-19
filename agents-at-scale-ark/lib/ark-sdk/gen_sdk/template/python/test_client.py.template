@@ -1,0 +1,232 @@
+
+class TestARKResourceClient(BaseTestCase):
+    """Test cases for ARKResourceClient"""
+    
+    def test_create_resource(self):
+        """Test creating a resource"""
+        
+        # Setup
+        self.mock_api_client.create_namespaced_custom_object.return_value = self.sample_resource_data
+        client = ARKResourceClient(
+            api_version="test.io/v1",
+            kind="TestResource",
+            plural="testresources",
+            model_class=MockModel,
+            namespace="default"
+        )
+        
+        # Create resource
+        resource = MockModel(**self.sample_resource_data)
+        result = client.create(resource)
+        
+        # Verify
+        self.mock_api_client.create_namespaced_custom_object.assert_called_once_with(
+            group="test.io",
+            version="v1",
+            namespace="default",
+            plural="testresources",
+            body=self.sample_resource_data
+        )
+        self.assertTrue(hasattr(result, 'metadata'))
+    
+    def test_get_resource(self):
+        """Test getting a resource"""
+        
+        # Setup
+        self.mock_api_client.get_namespaced_custom_object.return_value = self.sample_resource_data
+        client = ARKResourceClient(
+            api_version="test.io/v1",
+            kind="TestResource",
+            plural="testresources",
+            model_class=MockModel,
+            namespace="default"
+        )
+        
+        # Get resource
+        result = client.get("test-resource")
+        
+        # Verify
+        self.mock_api_client.get_namespaced_custom_object.assert_called_once_with(
+            group="test.io",
+            version="v1",
+            namespace="default",
+            plural="testresources",
+            name="test-resource"
+        )
+        self.assertTrue(hasattr(result, 'metadata'))
+    
+    def test_get_resource_not_found(self):
+        """Test getting a non-existent resource"""
+        
+        # Setup
+        api_exception = ApiException()
+        api_exception.status = 404
+        self.mock_api_client.get_namespaced_custom_object.side_effect = api_exception
+        
+        client = ARKResourceClient(
+            api_version="test.io/v1",
+            kind="TestResource",
+            plural="testresources",
+            model_class=MockModel,
+            namespace="default"
+        )
+        
+        # Get resource should raise exception
+        with self.assertRaises(Exception) as context:
+            client.get("non-existent")
+        
+        self.assertIn("not found", str(context.exception))
+    
+    def test_list_resources(self):
+        """Test listing resources"""
+        
+        # Setup
+        self.mock_api_client.list_namespaced_custom_object.return_value = {
+            'items': [self.sample_resource_data, self.sample_resource_data]
+        }
+        client = ARKResourceClient(
+            api_version="test.io/v1",
+            kind="TestResource",
+            plural="testresources",
+            model_class=MockModel,
+            namespace="default"
+        )
+        
+        # List resources
+        results = client.list()
+        
+        # Verify
+        self.mock_api_client.list_namespaced_custom_object.assert_called_once_with(
+            group="test.io",
+            version="v1",
+            namespace="default",
+            plural="testresources"
+        )
+        self.assertEqual(len(results), 2)
+    
+    def test_list_resources_with_label_selector(self):
+        """Test listing resources with label selector"""
+        
+        # Setup
+        self.mock_api_client.list_namespaced_custom_object.return_value = {'items': []}
+        client = ARKResourceClient(
+            api_version="test.io/v1",
+            kind="TestResource",
+            plural="testresources",
+            model_class=MockModel,
+            namespace="default"
+        )
+        
+        # List resources with label selector
+        client.list(label_selector="app=test")
+        
+        # Verify
+        self.mock_api_client.list_namespaced_custom_object.assert_called_once_with(
+            group="test.io",
+            version="v1",
+            namespace="default",
+            plural="testresources",
+            label_selector="app=test"
+        )
+    
+    def test_update_resource(self):
+        """Test updating a resource"""
+        
+        # Setup
+        self.mock_api_client.replace_namespaced_custom_object.return_value = self.sample_resource_data
+        client = ARKResourceClient(
+            api_version="test.io/v1",
+            kind="TestResource",
+            plural="testresources",
+            model_class=MockModel,
+            namespace="default"
+        )
+        
+        # Update resource
+        resource = MockModel(**self.sample_resource_data)
+        result = client.update(resource)
+        
+        # Verify
+        self.mock_api_client.replace_namespaced_custom_object.assert_called_once_with(
+            group="test.io",
+            version="v1",
+            namespace="default",
+            plural="testresources",
+            name="test-resource",
+            body=self.sample_resource_data
+        )
+        self.assertTrue(hasattr(result, 'metadata'))
+    
+    def test_patch_resource(self):
+        """Test patching a resource"""
+        
+        # Setup
+        self.mock_api_client.patch_namespaced_custom_object.return_value = self.sample_resource_data
+        client = ARKResourceClient(
+            api_version="test.io/v1",
+            kind="TestResource",
+            plural="testresources",
+            model_class=MockModel,
+            namespace="default"
+        )
+        
+        # Patch resource
+        patch_data = {'spec': {'field1': 'new-value'}}
+        result = client.patch("test-resource", patch_data)
+        
+        # Verify
+        self.mock_api_client.patch_namespaced_custom_object.assert_called_once_with(
+            group="test.io",
+            version="v1",
+            namespace="default",
+            plural="testresources",
+            name="test-resource",
+            body=patch_data
+        )
+        self.assertTrue(hasattr(result, 'metadata'))
+    
+    def test_delete_resource(self):
+        """Test deleting a resource"""
+        
+        # Setup
+        client = ARKResourceClient(
+            api_version="test.io/v1",
+            kind="TestResource",
+            plural="testresources",
+            model_class=MockModel,
+            namespace="default"
+        )
+        
+        # Delete resource
+        client.delete("test-resource")
+        
+        # Verify
+        self.mock_api_client.delete_namespaced_custom_object.assert_called_once_with(
+            group="test.io",
+            version="v1",
+            namespace="default",
+            plural="testresources",
+            name="test-resource"
+        )
+    
+    def test_delete_resource_not_found(self):
+        """Test deleting a non-existent resource"""
+        
+        # Setup
+        api_exception = ApiException()
+        api_exception.status = 404
+        self.mock_api_client.delete_namespaced_custom_object.side_effect = api_exception
+        
+        client = ARKResourceClient(
+            api_version="test.io/v1",
+            kind="TestResource",
+            plural="testresources",
+            model_class=MockModel,
+            namespace="default"
+        )
+        
+        # Delete should raise exception
+        with self.assertRaises(Exception) as context:
+            client.delete("non-existent")
+        
+        self.assertIn("not found", str(context.exception))

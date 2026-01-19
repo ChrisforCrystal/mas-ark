@@ -1,0 +1,77 @@
+# Tools and MCP Servers
+
+## Building Robust MCP Servers
+
+It is essential to consider using Kubernetes Probes for MCP server deployments. This allows the cluster to monitor status, restart if needed, explain health and readiness. This is hugely helpful for troubleshooting. A brief summary of probes:
+
+- Liveness probes determine when to restart a container. For example, liveness probes could catch a deadlock when an application is running but unable to make progress. If a container fails its liveness probe repeatedly, the kubelet restarts the container. Liveness probes do not wait for readiness probes to succeed. If you want to wait before executing a liveness probe, you can either define initialDelaySeconds or use a startup probe.
+
+- Readiness probes determine when a container is ready to accept traffic. This is useful when waiting for an application to perform time-consuming initial tasks that depend on its backing services; for example: establishing network connections, loading files, and warming caches. Readiness probes can also be useful later in the container’s lifecycle, for example, when recovering from temporary faults or overloads. If the readiness probe returns a failed state, Kubernetes removes the pod from all matching service endpoints. Readiness probes run on the container during its whole lifecycle.
+
+- A startup probe verifies whether the application within a container is started. This can be used to adopt liveness checks on slow starting containers, avoiding them getting killed by the kubelet before they are up and running. If such a probe is configured, it disables liveness and readiness checks until it succeeds. This type of probe is only executed at startup, unlike liveness and readiness probes, which are run periodically.
+
+[Read more about the Configure Liveness, Readiness and Startup Probes.] (https://kubernetes.io/docs/concepts/configuration/liveness-readiness-startup-probes/)
+
+## Robust Example
+
+This is example is based on our Helm Chart for the [Playwright MCP Server](https://github.com/microsoft/playwright-mcp).
+
+```yaml
+# Kubernetes Health Probes - Essential for proper pod lifecycle management
+#
+# STARTUP PROBE: Protects slow-starting containers during initialization
+# - Purpose: Delays liveness/readiness checks until container fully starts
+# - Behavior: If fails, other probes don't start; prevents premature kills
+# - Use case: Applications with long startup times (like Playwright browser installation)
+# - Test: MCP handshake - if initialize succeeds, server is ready to accept MCP requests
+startupProbe:
+  exec:
+    command:
+    - /bin/sh
+    - -c
+    - |
+      curl -s -f -X POST http://localhost:8080/mcp \
+        -H "Content-Type: application/json" \
+        -H "Accept: application/json, text/event-stream" \
+        -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"probe","version":"1.0"}}}' \
+        | grep -q '"result"'
+  initialDelaySeconds: 30    # Wait 30s before first check (allow server startup)
+  periodSeconds: 15          # Check every 15s
+  timeoutSeconds: 10         # Timeout each check after 10s
+  failureThreshold: 12       # Allow 12 failures = 3 minutes total startup time
+
+# READINESS PROBE: Controls traffic routing to pod
+# - Purpose: Determines if pod should receive traffic from Services/load balancers
+# - Behavior: If fails, pod removed from endpoints (no traffic) but NOT restarted
+# - Use case: Pod running but not ready to serve requests (e.g., loading data, warming up)
+# - Test: MCP handshake - if initialize succeeds, server is ready to handle client traffic
+readinessProbe:
+  exec:
+    command:
+    - /bin/sh
+    - -c
+    - |
+      curl -s -f -X POST http://localhost:8080/mcp \
+        -H "Content-Type: application/json" \
+        -H "Accept: application/json, text/event-stream" \
+        -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"probe","version":"1.0"}}}' \
+        | grep -q '"result"'
+  initialDelaySeconds: 30    # Wait 30s after startup probe succeeds
+  periodSeconds: 15          # Check every 15s
+  timeoutSeconds: 10         # Timeout each check after 10s  
+  failureThreshold: 3        # Mark not-ready after 3 consecutive failures
+
+# LIVENESS PROBE: Detects and recovers from deadlocked containers
+# - Purpose: Determines if container is still running properly (restart if not)
+# - Behavior: If fails, kubelet kills and restarts the container
+# - Use case: Detect deadlocks, infinite loops, or hung processes
+# - Test: HTTP GET / returns 400 "Invalid request" - proves server is alive and processing HTTP
+# - Note: Microsoft Playwright MCP server only has /mcp and /sse endpoints, no /health endpoint
+livenessProbe:
+  httpGet:
+    path: /
+    port: 8080
+  periodSeconds: 30          # Check every 30s (less frequent than readiness)
+  timeoutSeconds: 10         # Timeout each check after 10s
+  failureThreshold: 6        # HIGHER than readiness - pod marked not-ready before restart
+```

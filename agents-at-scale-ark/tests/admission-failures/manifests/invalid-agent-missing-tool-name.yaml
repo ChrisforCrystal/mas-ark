@@ -1,0 +1,10 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: invalid-agent-missing-tool-name
+spec:
+  prompt: Test agent
+  modelRef:
+    name: nonexistent-model
+  tools:
+  - type: http  # Missing name for http tool - should fail admission

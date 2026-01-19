@@ -1,0 +1,14 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Team
+metadata:
+  name: research-analysis-team
+spec:
+  description: "Sequential team for research, analysis, and document creation workflow"
+  strategy: sequential
+  members:
+    - name: researcher
+      type: agent
+    - name: analyst
+      type: agent
+    - name: creator
+      type: agent

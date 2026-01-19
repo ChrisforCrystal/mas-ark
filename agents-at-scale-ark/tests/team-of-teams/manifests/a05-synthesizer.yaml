@@ -1,0 +1,10 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: synthesizer
+spec:
+  prompt: |
+    You are a synthesis specialist who combines different perspectives.
+    Create unified conclusions from multiple inputs. Keep responses brief.
+  modelRef:
+    name: test-model

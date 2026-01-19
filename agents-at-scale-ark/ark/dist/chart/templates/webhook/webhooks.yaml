@@ -1,0 +1,273 @@
+{{- if .Values.webhook.enable }}
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: ark-mutating-webhook-configuration
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    {{- if .Values.certmanager.enable }}
+    cert-manager.io/inject-ca-from: "{{ $.Release.Namespace }}/serving-cert"
+    {{- end }}
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+webhooks:
+  - name: magent-v1.kb.io
+    objectSelector:
+      matchExpressions:
+      - key: "ark.mckinsey.com/skip-webhook-validation"
+        operator: "NotIn"
+        values: ["true"]
+    clientConfig:
+      service:
+        name: ark-webhook-service
+        namespace: {{ .Release.Namespace }}
+        path: /mutate-ark-mckinsey-com-v1alpha1-agent
+    failurePolicy: {{ .Values.webhook.failurePolicy | default "Fail" }}
+    timeoutSeconds: {{ .Values.webhook.timeoutSeconds | default 10 }}
+    sideEffects: None
+    admissionReviewVersions:
+      - v1
+    rules:
+      - operations:
+          - CREATE
+          - UPDATE
+        apiGroups:
+          - ark.mckinsey.com
+        apiVersions:
+          - v1alpha1
+        resources:
+          - agents
+  - name: mmodel-v1.kb.io
+    clientConfig:
+      service:
+        name: ark-webhook-service
+        namespace: {{ .Release.Namespace }}
+        path: /mutate-ark-mckinsey-com-v1alpha1-model
+    failurePolicy: {{ .Values.webhook.failurePolicy | default "Fail" }}
+    timeoutSeconds: {{ .Values.webhook.timeoutSeconds | default 10 }}
+    sideEffects: None
+    admissionReviewVersions:
+      - v1
+    rules:
+      - operations:
+          - CREATE
+          - UPDATE
+        apiGroups:
+          - ark.mckinsey.com
+        apiVersions:
+          - v1alpha1
+        resources:
+          - models
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: ark-validating-webhook-configuration
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    {{- if .Values.certmanager.enable }}
+    cert-manager.io/inject-ca-from: "{{ $.Release.Namespace }}/serving-cert"
+    {{- end }}
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+webhooks:
+  - name: vagent-v1.kb.io
+    objectSelector:
+      matchExpressions:
+      - key: "ark.mckinsey.com/skip-webhook-validation"
+        operator: "NotIn"
+        values: ["true"]
+    clientConfig:
+      service:
+        name: ark-webhook-service
+        namespace: {{ .Release.Namespace }}
+        path: /validate-ark-mckinsey-com-v1alpha1-agent
+    failurePolicy: {{ .Values.webhook.failurePolicy | default "Fail" }}
+    timeoutSeconds: {{ .Values.webhook.timeoutSeconds | default 10 }}
+    sideEffects: None
+    admissionReviewVersions:
+      - v1
+    rules:
+      - operations:
+          - CREATE
+          - UPDATE
+        apiGroups:
+          - ark.mckinsey.com
+        apiVersions:
+          - v1alpha1
+        resources:
+          - agents
+  - name: vevaluator-v1alpha1.kb.io
+    clientConfig:
+      service:
+        name: ark-webhook-service
+        namespace: {{ .Release.Namespace }}
+        path: /validate-ark-mckinsey-com-v1alpha1-evaluator
+    failurePolicy: {{ .Values.webhook.failurePolicy | default "Fail" }}
+    timeoutSeconds: {{ .Values.webhook.timeoutSeconds | default 10 }}
+    sideEffects: None
+    admissionReviewVersions:
+      - v1
+    rules:
+      - operations:
+          - CREATE
+          - UPDATE
+        apiGroups:
+          - ark.mckinsey.com
+        apiVersions:
+          - v1alpha1
+        resources:
+          - evaluators
+  - name: vmcpserver-v1.kb.io
+    clientConfig:
+      service:
+        name: ark-webhook-service
+        namespace: {{ .Release.Namespace }}
+        path: /validate-ark-mckinsey-com-v1alpha1-mcpserver
+    failurePolicy: {{ .Values.webhook.failurePolicy | default "Fail" }}
+    timeoutSeconds: {{ .Values.webhook.timeoutSeconds | default 10 }}
+    sideEffects: None
+    admissionReviewVersions:
+      - v1
+    rules:
+      - operations:
+          - CREATE
+          - UPDATE
+        apiGroups:
+          - ark.mckinsey.com
+        apiVersions:
+          - v1alpha1
+        resources:
+          - mcpserver
+  - name: vmodel-v1.kb.io
+    clientConfig:
+      service:
+        name: ark-webhook-service
+        namespace: {{ .Release.Namespace }}
+        path: /validate-ark-mckinsey-com-v1alpha1-model
+    failurePolicy: {{ .Values.webhook.failurePolicy | default "Fail" }}
+    timeoutSeconds: {{ .Values.webhook.timeoutSeconds | default 10 }}
+    sideEffects: None
+    admissionReviewVersions:
+      - v1
+    rules:
+      - operations:
+          - CREATE
+          - UPDATE
+        apiGroups:
+          - ark.mckinsey.com
+        apiVersions:
+          - v1alpha1
+        resources:
+          - models
+  - name: vquery-v1.kb.io
+    clientConfig:
+      service:
+        name: ark-webhook-service
+        namespace: {{ .Release.Namespace }}
+        path: /validate-ark-mckinsey-com-v1alpha1-query
+    failurePolicy: {{ .Values.webhook.failurePolicy | default "Fail" }}
+    timeoutSeconds: {{ .Values.webhook.timeoutSeconds | default 10 }}
+    sideEffects: None
+    admissionReviewVersions:
+      - v1
+    rules:
+      - operations:
+          - CREATE
+          - UPDATE
+        apiGroups:
+          - ark.mckinsey.com
+        apiVersions:
+          - v1alpha1
+        resources:
+          - queries
+  - name: vteam-v1.kb.io
+    clientConfig:
+      service:
+        name: ark-webhook-service
+        namespace: {{ .Release.Namespace }}
+        path: /validate-ark-mckinsey-com-v1alpha1-team
+    failurePolicy: {{ .Values.webhook.failurePolicy | default "Fail" }}
+    timeoutSeconds: {{ .Values.webhook.timeoutSeconds | default 10 }}
+    sideEffects: None
+    admissionReviewVersions:
+      - v1
+    rules:
+      - operations:
+          - CREATE
+          - UPDATE
+        apiGroups:
+          - ark.mckinsey.com
+        apiVersions:
+          - v1alpha1
+        resources:
+          - teams
+  - name: vtool-v1.kb.io
+    objectSelector:
+      matchExpressions:
+      - key: "ark.mckinsey.com/skip-webhook-validation"
+        operator: "NotIn"
+        values: ["true"]
+    clientConfig:
+      service:
+        name: ark-webhook-service
+        namespace: {{ .Release.Namespace }}
+        path: /validate-ark-mckinsey-com-v1alpha1-tool
+    failurePolicy: {{ .Values.webhook.failurePolicy | default "Fail" }}
+    timeoutSeconds: {{ .Values.webhook.timeoutSeconds | default 10 }}
+    sideEffects: None
+    admissionReviewVersions:
+      - v1
+    rules:
+      - operations:
+          - CREATE
+          - UPDATE
+        apiGroups:
+          - ark.mckinsey.com
+        apiVersions:
+          - v1alpha1
+        resources:
+          - tools
+  - name: va2aserver-v1prealpha1.kb.io
+    clientConfig:
+      service:
+        name: ark-webhook-service
+        namespace: {{ .Release.Namespace }}
+        path: /validate-ark-mckinsey-com-v1prealpha1-a2aserver
+    failurePolicy: {{ .Values.webhook.failurePolicy | default "Fail" }}
+    timeoutSeconds: {{ .Values.webhook.timeoutSeconds | default 10 }}
+    sideEffects: None
+    admissionReviewVersions:
+      - v1
+    rules:
+      - operations:
+          - CREATE
+          - UPDATE
+        apiGroups:
+          - ark.mckinsey.com
+        apiVersions:
+          - v1prealpha1
+        resources:
+          - a2aservers
+  - name: vexecutionengine-v1prealpha1.kb.io
+    clientConfig:
+      service:
+        name: ark-webhook-service
+        namespace: {{ .Release.Namespace }}
+        path: /validate-ark-mckinsey-com-v1prealpha1-executionengine
+    failurePolicy: {{ .Values.webhook.failurePolicy | default "Fail" }}
+    timeoutSeconds: {{ .Values.webhook.timeoutSeconds | default 10 }}
+    sideEffects: None
+    admissionReviewVersions:
+      - v1
+    rules:
+      - operations:
+          - CREATE
+          - UPDATE
+        apiGroups:
+          - ark.mckinsey.com
+        apiVersions:
+          - v1prealpha1
+        resources:
+          - executionengines
+{{- end }}

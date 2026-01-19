@@ -1,0 +1,157 @@
+{{- if .Values.rbac.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "ark-tenant.fullname" . }}-role
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ark-tenant.labels" . | nindent 4 }}
+rules:
+# ARK resources - full access within namespace
+- apiGroups:
+  - ark.mckinsey.com
+  resources:
+  - agents
+  - a2aservers
+  - a2atasks
+  - evaluators
+  - evaluations
+  - executionengines
+  - mcpservers
+  - memories
+  - models
+  - queries
+  - teams
+  - tools
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+# ARK resource status and finalizers
+- apiGroups:
+  - ark.mckinsey.com
+  resources:
+  - agents/status
+  - a2aservers/status
+  - a2atasks/status
+  - evaluations/status
+  - evaluators/status
+  - executionengines/status
+  - mcpservers/status
+  - memories/status
+  - models/status
+  - queries/status
+  - teams/status
+  - tools/status
+  - agents/finalizers
+  - a2aservers/finalizers
+  - a2atasks/finalizers
+  - evaluators/finalizers
+  - evaluations/finalizers
+  - executionengines/finalizers
+  - mcpservers/finalizers
+  - memories/finalizers
+  - models/finalizers
+  - queries/finalizers
+  - teams/finalizers
+  - tools/finalizers
+  verbs:
+  - get
+  - patch
+  - update
+# Core Kubernetes resources
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  - configmaps
+  - serviceaccounts
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - pods/log
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - persistentvolumeclaims
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+# Apps resources
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - replicasets
+  - statefulsets
+  - daemonsets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+# Batch resources
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  - cronjobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+# Networking resources
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - networkpolicies
+  - ingresses
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+{{- end }}

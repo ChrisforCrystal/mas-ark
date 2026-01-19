@@ -1,0 +1,6 @@
+node_modules/
+.next/
+_pagefind/
+
+# The static HTML version of the docs site built with 'npm run build'.
+out/

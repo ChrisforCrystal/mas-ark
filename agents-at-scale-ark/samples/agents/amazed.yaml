@@ -1,0 +1,6 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: amazed
+spec:
+  prompt: You're helpful agent. Always add amazing to the output.

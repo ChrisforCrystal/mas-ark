@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Values.modelName }}-model-token
+type: Opaque
+stringData:
+  # IMPORTANT: Environment variables must be substituted before applying
+  # Use one of these methods:
+  #   1. make models-apply (recommended)
+  #   2. devspace dev (full deployment)
+  #   3. make fix-models (if you have broken queries)
+  # Manual: export AZURE_API_KEY="key" && envsubst < models/{{ .Values.modelName }}.yaml | kubectl apply -f -
+  token: ${AZURE_API_KEY}
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Model
+metadata:
+  name: {{ .Values.modelName }}
+spec:
+  type: azure
+  model:
+    value: gpt-4.1-mini
+  config:
+    azure:
+      baseUrl:
+        value: ${AZURE_BASE_URL}
+      apiKey:
+        valueFrom:
+          secretKeyRef:
+            name: {{ .Values.modelName }}-model-token
+            key: token
+      apiVersion:
+        value: ${AZURE_API_VERSION}

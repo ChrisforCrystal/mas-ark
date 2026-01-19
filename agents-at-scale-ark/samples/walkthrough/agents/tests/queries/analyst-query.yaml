@@ -1,0 +1,20 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: analyst-test-query
+spec:
+  input: |
+    Please analyze the following research findings about Kubernetes adoption:
+    
+    Research Data:
+    - 87% of enterprises report improved scalability after Kubernetes adoption
+    - Cost reduction averages 23% due to better resource utilization
+    - Deployment frequency increased by 200% on average
+    - Mean time to recovery decreased from 4 hours to 15 minutes
+    - Developer productivity improved by 35%
+    - 73% report easier multi-cloud management
+    
+    Please provide analysis with insights, trends, and strategic recommendations.
+  targets:
+    - type: agent
+      name: analyst

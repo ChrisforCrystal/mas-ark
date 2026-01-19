@@ -1,0 +1,138 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: researcher-agent-test
+spec:
+  steps:
+    - name: setup-prerequisites
+      try:
+        # Setup Azure credentials for model
+        - script:
+            skipLogOutput: true
+            content: |
+              set -u
+              echo "{\"token\": \"$E2E_TEST_AZURE_OPENAI_KEY\", \"url\": \"$E2E_TEST_AZURE_OPENAI_BASE_URL\"}"
+            outputs:
+            - name: azure
+              value: (json_parse($stdout))
+        
+        # Create model secret and model
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: default-model-token
+              type: Opaque
+              data:
+                token: (base64_encode($azure.token))
+        
+        - apply:
+            resource:
+              apiVersion: ark.mckinsey.com/v1alpha1
+              kind: Model
+              metadata:
+                name: default
+              spec:
+                type: azure
+                model:
+                  value: gpt-4.1-mini
+                config:
+                  azure:
+                    baseUrl:
+                      value: ($azure.url)
+                    apiKey:
+                      valueFrom:
+                        secretKeyRef:
+                          name: default-model-token
+                          key: token
+                    apiVersion:
+                      value: "2024-12-01-preview"
+        
+        # Create the web search tool
+        - apply:
+            file: "../../tools/web-search-tool.yaml"
+        
+        # Setup RBAC permissions
+        - apply:
+            file: "../../tests/manifests/rbac/chainsaw-permissions.yaml"
+        
+        # Wait for prerequisites
+        - assert:
+            resource:
+              apiVersion: ark.mckinsey.com/v1alpha1
+              kind: Model
+              metadata:
+                name: default
+        - assert:
+            resource:
+              apiVersion: ark.mckinsey.com/v1alpha1
+              kind: Tool
+              metadata:
+                name: web-search
+
+    - name: test-researcher-agent
+      try:
+        # Create researcher agent
+        - apply:
+            file: "../researcher-agent.yaml"
+        
+        # Validate agent creation
+        - assert:
+            resource:
+              apiVersion: ark.mckinsey.com/v1alpha1
+              kind: Agent
+              metadata:
+                name: researcher
+                labels:
+                  category: research
+                  role: researcher
+        
+        # Create test query for researcher
+        - apply:
+            file: "queries/researcher-query.yaml"
+        
+        # Wait for query completion and validate response
+        - assert:
+            resource:
+              apiVersion: ark.mckinsey.com/v1alpha1
+              kind: Query
+              metadata:
+                name: researcher-test-query
+              status:
+                phase: done
+        
+        # Validate response content
+        - assert:
+            resource:
+              apiVersion: ark.mckinsey.com/v1alpha1
+              kind: Query
+              metadata:
+                name: researcher-test-query
+              status:
+                (length(responses)): 1
+                (contains(responses[0].target.name, 'researcher')): true
+                (length(responses[0].content) > `100`): true
+                (contains(responses[0].content, 'Kubernetes') || contains(responses[0].content, 'kubernetes')): true
+                (contains(responses[0].content, 'Research Findings') || contains(responses[0].content, 'Summary')): true
+        
+        - script:
+            content: |
+              echo "✅ Researcher Agent Test Results:"
+              echo "  - Agent created successfully"
+              echo "  - Query executed and completed"
+              echo "  - Response contains research findings"
+              echo "  - Web search functionality working"
+              echo ""
+              echo "Researcher agent is ready for team integration"
+      
+      catch:
+        - events: {}
+        - describe:
+            apiVersion: ark.mckinsey.com/v1alpha1
+            kind: Agent
+            name: researcher
+        - describe:
+            apiVersion: ark.mckinsey.com/v1alpha1
+            kind: Query
+            name: researcher-test-query

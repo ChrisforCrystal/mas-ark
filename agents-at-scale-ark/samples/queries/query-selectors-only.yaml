@@ -1,0 +1,9 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: query-selector-only
+spec:
+  input: "Analyze the current market trends"
+  selector:
+    matchLabels:
+      role: analyst

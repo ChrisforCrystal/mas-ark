@@ -1,0 +1,7 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Team
+metadata:
+  name: invalid-team-missing-members
+spec:
+  # Missing required 'members' field - should fail admission
+  strategy: sequential

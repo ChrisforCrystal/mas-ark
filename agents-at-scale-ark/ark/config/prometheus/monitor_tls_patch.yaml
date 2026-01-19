@@ -1,0 +1,21 @@
+# Patch for Prometheus ServiceMonitor to enable secure TLS configuration
+# using certificates managed by cert-manager.
+# This patch can be used to override the default TLS configuration if needed.
+- op: replace
+  path: /spec/endpoints/0/tlsConfig
+  value:
+    # serverName must match one of the DNS names in the metrics certificate
+    # Update this if your certificate uses a different service name
+    serverName: ark.ark-system.svc
+    insecureSkipVerify: false
+    ca:
+      secret:
+        name: metrics-server-cert
+        key: ca.crt
+    cert:
+      secret:
+        name: metrics-server-cert
+        key: tls.crt
+    keySecret:
+      name: metrics-server-cert
+      key: tls.key

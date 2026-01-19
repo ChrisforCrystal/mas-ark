@@ -1,0 +1,6 @@
+goal:
+  name: weather
+  version: v0.0.1
+  startpoint: Start by figuring out the current weather
+  objective: |
+    I'd like a weather report on {{location}} please

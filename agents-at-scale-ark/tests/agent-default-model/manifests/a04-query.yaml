@@ -1,0 +1,9 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: default-model-query
+spec:
+  input: "Please confirm you are working"
+  target:
+    type: agent
+    name: agent-no-model

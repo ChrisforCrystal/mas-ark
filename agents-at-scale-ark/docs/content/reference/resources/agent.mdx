@@ -1,0 +1,311 @@
+---
+title: Agent
+description: AI agents with prompts, models, tools, and reconciliation behavior
+---
+
+# Agent
+
+Agents are the core execution units in ARK. They process inputs using AI models and can use tools to extend their capabilities.
+
+## Specification
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: example-agent
+spec:
+  # Agent's system prompt that defines its behavior
+  prompt: |
+    You are a helpful assistant.
+    
+  # Human-readable description
+  description: General-purpose assistant agent
+  
+  # Model reference (optional - defaults to 'default' if not specified)
+  modelRef:
+    name: gpt-4-model
+    namespace: default
+    
+  # Execution engine (optional - uses built-in OpenAI-compatible engine if not specified)
+  executionEngine:
+    name: langchain-engine
+    namespace: default
+    
+  # Tools the agent can use
+  tools:
+    - type: built-in  # System-provided tools (terminate, noop)
+      name: terminate
+    - type: http      # HTTP tool references
+      name: my-http-tool
+    - type: mcp       # MCP server tool references
+      name: my-mcp-tool
+      
+  # Parameters for template processing in prompts
+  parameters:
+    - name: api_endpoint
+      valueFrom:
+        configMapKeyRef:
+          name: config
+          key: endpoint
+    - name: agent_name
+      valueFrom:
+        queryParameterRef:
+          name: agent_name
+          
+  # JSON schema for structured output (optional)
+  outputSchema:
+    type: object
+    properties:
+      summary:
+        type: string
+      confidence:
+        type: number
+
+  # Header overrides for models and MCP servers (optional)
+  overrides:
+    - headers:
+        - name: X-User-ID
+          value:
+            value: "user123"
+      resourceType: model
+      labelSelector:
+        matchLabels:
+          provider: openai
+
+status:
+  # Status conditions indicate agent health and availability
+  conditions:
+  - type: Available
+    status: "True"
+    reason: AllDependenciesReady
+    message: Agent is ready for execution
+```
+
+## Status and Conditions
+
+Agents use status conditions to indicate their availability and health:
+
+### Conditions
+
+| Condition Type | Status | Description |
+|----------------|--------|-------------|
+| **Available** | True | Agent is ready for execution with all dependencies resolved |
+| **Available** | False | Agent has unresolved dependencies or configuration issues |
+
+### Status Fields
+
+```yaml
+status:
+  conditions:
+  - type: Available
+    status: "True"
+    reason: AllDependenciesReady
+    message: Agent is ready for execution
+```
+
+## Examples
+
+### Simple Agent
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: simple-agent
+spec:
+  prompt: You are a helpful assistant.
+```
+
+### Agent with Tools
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: weather-agent
+spec:
+  prompt: |
+    You are a weather forecasting assistant.
+    Use the available tools to get weather information.
+  tools:
+    - type: http
+      name: get-coordinates
+    - type: http
+      name: get-forecast
+```
+
+### Agent with Structured Output
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: analyzer
+spec:
+  prompt: Analyze the input and provide structured feedback.
+  outputSchema:
+    type: object
+    required: [sentiment, confidence]
+    properties:
+      sentiment:
+        type: string
+        enum: [positive, negative, neutral]
+      confidence:
+        type: number
+        minimum: 0
+        maximum: 1
+```
+
+### Agent with Templated Prompt from ConfigMap
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: policy-reviewer
+spec:
+  prompt: |
+    You are a policy review assistant. Review documents according to these guidelines:
+    
+    Policy documents are located at: {{.policyDocumentsPath}}
+    
+    Use the following criteria for review:
+    {{.reviewCriteria}}
+  parameters:
+    - name: policyDocumentsPath
+      valueFrom:
+        configMapKeyRef:
+          name: policy-config
+          key: documents-path
+    - name: reviewCriteria
+      valueFrom:
+        configMapKeyRef:
+          name: policy-config
+          key: review-criteria
+```
+
+### Agent with Query Parameter Reference
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: dynamic-agent
+spec:
+  prompt: |
+    Your name is {{.agent_name}}.
+    You operate in {{.mode}} mode.
+    Your expertise level is {{.expertise_level}}.
+  parameters:
+    - name: agent_name
+      valueFrom:
+        queryParameterRef:  # Resolved from Query's parameters at runtime
+          name: agent_name
+    - name: mode
+      valueFrom:
+        queryParameterRef:
+          name: operation_mode
+    - name: expertise_level
+      value: "expert"  # Static value
+```
+
+### Agent with Overrides
+
+Inject custom headers when interacting with models:
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: custom-headers-agent
+spec:
+  prompt: You are a helpful assistant.
+  overrides:
+    - headers:
+        - name: X-User-ID
+          value:
+            valueFrom:
+              secretKeyRef:
+                name: user-session
+                key: user-id
+        - name: X-Request-Context
+          value:
+            value: "production"
+      resourceType: model
+      labelSelector:
+        matchLabels:
+          provider: openai
+```
+
+See [Overrides](/user-guide/overrides) for detailed documentation.
+
+### Agent with Partial Tools
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: my-agent
+spec:
+  tools:
+    - type: http
+      name: weather-forecast  # Name exposed to Agent
+      description: "Get latest weather forecast"  # Description exposed to Agent
+      partial:
+        name: weather-api  # Actual Tool CRD name (type: http)
+        parameters:
+          - name: city
+            value: "{{ .Query.city }}"  # From query parameters
+          - name: units
+            value: "metric"  # Static value
+          - name: language
+            value: nil  # Explicitly exclude parameter to be provided by Agent
+```
+
+
+
+### A2A Agent (Created by A2AServer)
+
+Agents created by [A2AServer](/reference/resources/a2aserver) resources use the A2A execution engine:
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: aws-operator-agent
+  annotations:
+    # A2A server that created this agent
+    ark.mckinsey.com/a2a-server-name: aws-operator-agent
+    # Resolved address of the A2A server
+    ark.mckinsey.com/a2a-server-address: http://ark-agentcore-bridge.default.svc.cluster.local:80/a2a/agent/aws_operator_agent-jg0yD9Hv2n
+    # Skills discovered from the A2A server
+    ark.mckinsey.com/a2a-server-skills: '[{"name":"describe_ec2_instances","description":"List and describe EC2 instances"}]'
+spec:
+  description: AWS operations agent with read-only access to AWS services
+  prompt: You are aws_operator_agent. AWS operations agent with read-only access to AWS services
+  executionEngine:
+    name: a2a
+  # modelRef omitted - A2A agents don't require models by default
+  # If the underlying A2A server uses an ARK model, the agent can optionally link to it via modelRef.
+  # When modelRef is set, the agent will only show as Available if both the model and A2A server are available.
+  # Otherwise, only the A2A server availability is checked.
+```
+
+## Reconciliation Behavior
+
+The agent controller continuously reconciles agent resources to ensure dependencies are met:
+
+### Model Resolution
+
+1. **Model Reference**: Controller validates the specified model exists in agent's namespace
+2. **Model not found**: Agent status condition "Available" is set to False with warning event
+3. **A2A Agents**: Agents owned by A2AServer resources do not require a model reference
+
+### Tool Resolution
+
+1. **Custom tools**: Controller validates each custom tool exists in agent's namespace
+2. **Built-in tools**: No validation needed (always available)
+3. **Tool not found**: Agent status condition "Available" is set to False with warning event
+
+### Dependency Watching
+
+The controller watches for changes to:
+- **Models**: When a model is created/updated, reconciles all dependent agents
+- **Tools**: When a tool is created/updated, reconciles all agents using that tool
+
+This ensures agents automatically become Available when missing dependencies are resolved.

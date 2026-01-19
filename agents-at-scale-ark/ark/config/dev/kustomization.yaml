@@ -1,0 +1,51 @@
+namespace: default
+namePrefix: ark-
+
+resources:
+- ../crd
+- ../rbac
+- ../webhook
+- ../certmanager
+
+patches:
+- path: manager_webhook_patch.yaml
+  target:
+    kind: Service
+- path: certificate_patch.yaml
+  target:
+    kind: Certificate
+
+replacements:
+- source:
+    kind: Service
+    version: v1
+    name: webhook-service
+    fieldPath: .metadata.name # Name of the service
+  targets:
+    - select:
+        kind: Certificate
+        group: cert-manager.io
+        version: v1
+        name: serving-cert
+      fieldPaths:
+        - .spec.dnsNames.0
+        - .spec.dnsNames.1
+      options:
+        delimiter: '.'
+        index: 0
+        create: true
+- source:
+    kind: Certificate
+    group: cert-manager.io
+    version: v1
+    name: serving-cert
+    fieldPath: .metadata.namespace
+  targets:
+    - select:
+        kind: ValidatingWebhookConfiguration
+      fieldPaths:
+        - .metadata.annotations.[cert-manager.io/inject-ca-from]
+      options:
+        delimiter: '/'
+        index: 0
+        create: true

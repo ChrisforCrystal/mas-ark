@@ -1,0 +1,149 @@
+---
+title: Agents
+description: Create, modify, and manage AI agents
+---
+
+# Agents
+
+Agents are the core execution units in Agents at Scale. They receive inputs, process them using AI models, and return outputs. Agents can be configured with specific prompts, models, and tools to perform specialized tasks.
+
+An agent wraps an AI model with a specific prompt and configuration, creating a reusable component that can be queried by other agents or directly through queries. Agents can reference tools and models to extend their capabilities.
+
+Agents support [overrides](/user-guide/overrides) to dynamically inject headers when interacting with models and MCP servers.
+
+## Specification
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: sample-agent
+spec:
+  prompt: You're helpful agent. Always add amazing to the output.
+  # If no model is defined, 'default' is used.
+  # modelRef:
+  #   name: gpt-4-model
+  #   namespace: default
+```
+
+## Creating Your First Agent
+
+Let's choose the Weather Agent defined in `samples/agents/weather.yaml`. Upon noticing, we can see that this agent uses two custom tools which are as follows:
+
+- `get-coordinates` (defined in `samples/tools/get-coordinates.yaml`)
+- `get-forecast` (defined in `samples/tools/get-forecast.yaml`)
+
+Before we can actually query the agent for the forecast in a particular city, we have to apply these Tools as follows:
+
+```bash
+kubectl apply -f samples/tools/get-coordinates.yaml
+```
+
+and
+
+```bash
+kubectl apply -f samples/tools/get-forecast.yaml
+```
+
+After these, now's the time to actually have the agent running. We can do so as follows:
+
+```bash
+kubectl apply -f samples/agents/weather.yaml
+```
+
+Now, let's also have the query applied using
+
+```bash
+kubectl apply -f samples/queries/weather.yaml
+```
+
+After all the above steps, we can now query the agent using fark as below:
+
+```bash
+fark query weather-query
+```
+
+Or:
+
+```bash
+ark query agent/sample-agent "What's the weather in London?"
+```
+
+## Modifying Agents
+
+You can modify existing agents in several ways:
+
+### Update Agent Configuration
+
+```bash
+# Update the agent's prompt
+kubectl patch agent weather --type='merge' -p='{
+  "spec": {
+    "prompt": "You are an expert weather forecaster. Provide detailed analysis."
+  }
+}'
+
+# Add tools to an existing agent
+kubectl patch agent weather --type='merge' -p='{
+  "spec": {
+    "tools": [
+      {"type": "http", "name": "get-coordinates"}
+    ]
+  }
+}'
+
+### Edit Agent Files Directly
+
+```bash
+# Edit agent configuration interactively
+kubectl edit agent weather
+
+# Or update from a modified file
+kubectl apply -f samples/agents/weather.yaml
+```
+
+## Managing Agent Resources
+
+### List and Inspect Agents
+
+```bash
+# List all agents
+kubectl get agents
+
+# Get detailed information about an agent
+kubectl describe agent weather
+
+# View the full agent configuration
+kubectl get agent weather -o yaml
+```
+
+### Verify Agent Functionality
+
+```bash
+# Test the agent after creation or modification
+fark agent weather "What's the weather in San Francisco?"
+
+# Check recent queries
+kubectl get queries
+
+# View query details
+kubectl describe query weather-query
+```
+
+## Deleting Agents
+
+Remove agents when they're no longer needed:
+
+```bash
+# Delete a specific agent
+kubectl delete agent weather
+
+# Delete multiple agents
+kubectl delete agent weather math-agent code-agent
+
+# Delete all agents (use with caution!)
+kubectl delete agents --all
+```
+---
+
+**Ready for multi-agent coordination?** Learn about [Teams](/user-guide/teams).

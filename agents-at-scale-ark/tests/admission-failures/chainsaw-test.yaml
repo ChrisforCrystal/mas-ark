@@ -1,0 +1,178 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: admission-failures  
+spec:
+  description: Comprehensive test of admission controller validation failures for invalid ARK resources
+  steps:
+  # Model validation failures
+  - name: test-model-missing-provider
+    try:
+    - error:
+        file: manifests/invalid-model-missing-provider.yaml
+  - name: test-model-missing-config
+    try:
+    - error:
+        file: manifests/invalid-model-missing-config.yaml
+  - name: test-model-invalid-provider
+    try:
+    - error:
+        file: manifests/invalid-model-invalid-provider.yaml
+  
+  # Agent validation failures  
+  - name: test-agent-missing-prompt
+    try:
+    - error:
+        file: manifests/invalid-agent-missing-prompt.yaml
+  - name: test-agent-old-format
+    try:
+    - error:
+        file: manifests/invalid-agent-old-format.yaml
+  - name: test-agent-empty-prompt
+    try:
+    - error:
+        file: manifests/invalid-agent-empty-prompt.yaml
+  - name: test-agent-invalid-tool-type
+    try:
+    - error:
+        file: manifests/invalid-agent-invalid-tool-type.yaml
+  - name: test-agent-invalid-builtin-tool
+    try:
+    - error:
+        file: manifests/invalid-agent-invalid-builtin-tool.yaml
+  - name: test-agent-missing-tool-name
+    try:
+    - error:
+        file: manifests/invalid-agent-missing-tool-name.yaml
+  - name: test-agent-builtin-missing-name
+    try:
+    - error:
+        file: manifests/invalid-agent-builtin-missing-name.yaml
+  
+  # Query validation failures
+  - name: test-query-missing-input
+    try:
+    - error:
+        file: manifests/invalid-query-missing-input.yaml
+  - name: test-query-empty-input
+    try:
+    - error:
+        file: manifests/invalid-query-empty-input.yaml
+  - name: test-query-invalid-target-type
+    try:
+    - error:
+        file: manifests/invalid-query-invalid-target-type.yaml
+  - name: test-query-no-targets-or-selector
+    try:
+    - error:
+        file: manifests/invalid-query-no-targets-or-selector.yaml
+  
+  # Team validation failures
+  - name: test-team-missing-members
+    try:
+    - error:
+        file: manifests/invalid-team-missing-members.yaml
+  - name: test-team-old-format
+    try:
+    - error:
+        file: manifests/invalid-team-old-format.yaml
+  - name: test-team-invalid-strategy
+    try:
+    - error:
+        file: manifests/invalid-team-invalid-strategy.yaml
+  - name: test-team-self-reference
+    try:
+    - error:
+        file: manifests/invalid-team-self-reference.yaml
+  - name: test-team-invalid-member-type
+    try:
+    - error:
+        file: manifests/invalid-team-invalid-member-type.yaml
+  - name: test-team-graph-no-config
+    try:
+    - error:
+        file: manifests/invalid-team-graph-no-config.yaml
+  - name: test-team-graph-no-edges
+    try:
+    - error:
+        file: manifests/invalid-team-graph-no-edges.yaml
+  - name: test-team-graph-invalid-edge
+    try:
+    - error:
+        file: manifests/invalid-team-graph-invalid-edge.yaml
+  - name: test-team-graph-no-maxturns
+    try:
+    - error:
+        file: manifests/invalid-team-graph-no-maxturns.yaml
+  
+  # Tool validation failures
+  - name: test-tool-missing-type
+    try:
+    - error:
+        file: manifests/invalid-tool-missing-type.yaml
+  - name: test-tool-missing-schema
+    try:
+    - error:
+        file: manifests/invalid-tool-missing-schema.yaml
+  - name: test-tool-invalid-schema
+    try:
+    - error:
+        file: manifests/invalid-tool-invalid-schema.yaml
+  - name: test-tool-malformed-schema
+    try:
+    - error:
+        file: manifests/invalid-tool-malformed-schema.yaml
+  - name: test-tool-fetcher-missing-url
+    try:
+    - error:
+        file: manifests/invalid-tool-fetcher-missing-url.yaml
+  - name: test-tool-fetcher-invalid-url
+    try:
+    - error:
+        file: manifests/invalid-tool-fetcher-invalid-url.yaml
+  - name: test-tool-fetcher-invalid-method
+    try:
+    - error:
+        file: manifests/invalid-tool-fetcher-invalid-method.yaml
+  - name: test-tool-mcp-missing-server
+    try:
+    - error:
+        file: manifests/invalid-tool-mcp-missing-server.yaml
+  - name: test-tool-mcp-missing-tool-name
+    try:
+    - error:
+        file: manifests/invalid-tool-mcp-missing-tool-name.yaml
+
+  # Evaluator validation failures
+  - name: test-evaluator-missing-address
+    try:
+    - error:
+        file: manifests/invalid-evaluator-missing-address.yaml
+  - name: test-evaluator-invalid-model
+    try:
+    - error:
+        file: manifests/invalid-evaluator-invalid-model.yaml
+
+  # MCPServer validation failures
+  - name: test-mcpserver-missing-address
+    try:
+    - error:
+        file: manifests/invalid-mcpserver-missing-address.yaml
+  - name: test-mcpserver-invalid-header
+    try:
+    - error:
+        file: manifests/invalid-mcpserver-invalid-header.yaml
+  - name: test-mcpserver-invalid-secret
+    try:
+    - error:
+        file: manifests/invalid-mcpserver-invalid-secret.yaml
+
+  # ExecutionEngine validation failures
+  - name: test-executionengine-missing-address
+    try:
+    - error:
+        file: manifests/invalid-executionengine-missing-address.yaml
+  - name: test-executionengine-reserved-name-a2a
+    try:
+    - error:
+        file: manifests/invalid-executionengine-reserved-name-a2a.yaml

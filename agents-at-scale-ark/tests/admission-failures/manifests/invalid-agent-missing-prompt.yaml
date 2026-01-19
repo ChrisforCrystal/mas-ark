@@ -1,0 +1,8 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: invalid-agent-missing-prompt
+spec:
+  # Missing required 'prompt' field - should fail admission
+  modelRef:
+    name: nonexistent-model

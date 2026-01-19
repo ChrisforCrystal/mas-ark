@@ -1,0 +1,29 @@
+{{- if .Values.rbac.enable }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+  name: ark-webhook-role
+rules:
+- apiGroups:
+  - ark.mckinsey.com
+  resources:
+  - agents
+  - teams
+  verbs:
+  - get
+  - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ark-webhook-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ark-webhook-role
+subjects:
+- kind: ServiceAccount
+  name: ark-controller
+  namespace: {{ .Release.Namespace }}{{- end -}}

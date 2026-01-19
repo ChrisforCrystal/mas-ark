@@ -1,0 +1,12 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: MCPServer
+metadata:
+  name: tool
+spec:
+  address:
+    valueFrom:
+      serviceRef:
+        name: tool
+  transport: http
+  timeout: 30s
+  description: "Tool service MCP server"

@@ -1,0 +1,11 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Team
+metadata:
+  name: synthesis-team
+spec:
+  strategy: sequential
+  members:
+    - type: agent
+      name: synthesizer
+    - type: agent
+      name: coordinator

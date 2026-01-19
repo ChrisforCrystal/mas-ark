@@ -1,0 +1,139 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: query-parameter-ref
+spec:
+  steps:
+    - try:
+      # Install mock-llm with Ark Model and custom config
+      - script:
+          content: |
+            helm install mock-llm oci://ghcr.io/dwmkerr/charts/mock-llm \
+              --version 0.1.27 \
+              --namespace $NAMESPACE \
+              --values mock-llm-values.yaml
+          env:
+          - name: NAMESPACE
+            value: ($namespace)
+      # Install ark-tenant for RBAC
+      - script:
+          content: |
+            helm install ark-tenant ../../charts/ark-tenant --namespace $NAMESPACE --create-namespace --wait
+          env:
+          - name: NAMESPACE
+            value: ($namespace)
+      # Apply ConfigMap, Secret
+      - apply:
+          file: manifests/a0[2-3]-*.yaml
+      - assert:
+          resource:
+            apiVersion: v1
+            kind: ConfigMap
+            metadata:
+              name: query-config
+      - assert:
+          resource:
+            apiVersion: v1
+            kind: Secret
+            metadata:
+              name: query-secrets
+      # Wait for Model to be available before creating agents/queries
+      - assert:
+          resource:
+            apiVersion: ark.mckinsey.com/v1alpha1
+            kind: Model
+            metadata:
+              name: mock-gpt-4.1
+            status:
+              conditions:
+              - type: ModelAvailable
+                status: "True"
+      # Apply agents first
+      - apply:
+          file: manifests/a0[4,6]-*.yaml
+      - assert:
+          resource:
+            apiVersion: ark.mckinsey.com/v1alpha1
+            kind: Agent
+            metadata:
+              name: test-agent
+      - assert:
+          resource:
+            apiVersion: ark.mckinsey.com/v1alpha1
+            kind: Agent
+            metadata:
+              name: test-agent-nested
+      # Now apply queries after Model and Agents are ready
+      - apply:
+          file: manifests/a0[5,7]-*.yaml
+      - assert:
+          timeout: 5s
+          resource:
+            apiVersion: ark.mckinsey.com/v1alpha1
+            kind: Query
+            metadata:
+              name: test-query-with-params
+            status:
+              phase: done
+      - assert:
+          resource:
+            apiVersion: ark.mckinsey.com/v1alpha1
+            kind: Query
+            metadata:
+              name: test-query-with-params
+            status:
+              (conditions[?type == 'Completed']):
+              - status: 'True'
+      # Response is immutable after phase: done, no need to retry
+      - assert:
+          timeout: 1s
+          resource:
+            apiVersion: ark.mckinsey.com/v1alpha1
+            kind: Query
+            metadata:
+              name: test-query-with-params
+            status:
+              (response != null): true
+              (response.target.name): 'test-agent'
+              # Verify system message echoed back with resolved parameter
+              (contains(response.raw, '"role":"system"')): true
+              (contains(response.content, 'QueryAgent123')): true
+      # Test nested valueFrom resolution - Agent referencing Query params that use ConfigMap/Secret
+      - assert:
+          timeout: 5s
+          resource:
+            apiVersion: ark.mckinsey.com/v1alpha1
+            kind: Query
+            metadata:
+              name: test-query-nested-params
+            status:
+              phase: done
+      - assert:
+          resource:
+            apiVersion: ark.mckinsey.com/v1alpha1
+            kind: Query
+            metadata:
+              name: test-query-nested-params
+            status:
+              (conditions[?type == 'Completed']):
+              - status: 'True'
+      # Response is immutable after phase: done, no need to retry
+      - assert:
+          timeout: 1s
+          resource:
+            apiVersion: ark.mckinsey.com/v1alpha1
+            kind: Query
+            metadata:
+              name: test-query-nested-params
+            status:
+              (response != null): true
+              (response.target.name): 'test-agent-nested'
+              # Verify the agent received the nested-resolved parameters
+              (contains(response.content, 'NestedConfigAgent')): true
+              (contains(response.content, 'SecretAnalyst')): true
+      catch:
+      - events: {}
+      - describe:
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          name: test-query-with-params

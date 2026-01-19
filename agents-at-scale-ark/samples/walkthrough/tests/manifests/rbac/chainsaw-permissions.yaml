@@ -1,0 +1,77 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: chainsaw-ark-permissions
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: team-editor-role
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: ($namespace)
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: chainsaw-ark-agent-permissions
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: agent-editor-role
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: ($namespace)
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: chainsaw-ark-query-permissions
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: query-editor-role
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: ($namespace)
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: chainsaw-ark-model-permissions
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: model-viewer-role
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: ($namespace)
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: chainsaw-ark-tool-permissions
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tool-editor-role
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: ($namespace)
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: chainsaw-secrets-permissions
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: edit
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: ($namespace)

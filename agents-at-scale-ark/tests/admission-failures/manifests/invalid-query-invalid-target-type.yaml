@@ -1,0 +1,9 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: invalid-query-invalid-target-type
+spec:
+  input: "Test query with invalid target type"
+  target:
+    type: invalid  # Unsupported target type - should fail admission
+    name: test-target

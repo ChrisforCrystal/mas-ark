@@ -1,0 +1,9 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Team
+metadata:
+  name: invalid-team-invalid-strategy
+spec:
+  strategy: invalid  # Unsupported strategy - should fail admission
+  members:
+    - type: agent
+      name: test-agent

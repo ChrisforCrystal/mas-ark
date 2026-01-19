@@ -1,0 +1,9 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: team-of-teams-query
+spec:
+  input: "Analyze the benefits of using microservices architecture. Provide research and synthesis."
+  target:
+    type: team
+    name: parent-team

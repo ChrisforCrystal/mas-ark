@@ -1,0 +1,15 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: MCPServer
+metadata:
+  name: simple-calculator-remote-sse-sr
+spec:
+  address:
+    valueFrom: 
+      serviceRef:
+        name: sse-calc-service
+        path: "/sse"
+        port: "http"
+        namespace: default
+  timeout: "60s"
+  transport: sse
+  description: "Remote server for performing calculations such as power."

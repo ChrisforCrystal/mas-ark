@@ -1,0 +1,9 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Team
+metadata:
+  name: invalid-team-invalid-member-type
+spec:
+  strategy: sequential
+  members:
+  - type: model  # Invalid member type - should fail admission
+    name: test-model

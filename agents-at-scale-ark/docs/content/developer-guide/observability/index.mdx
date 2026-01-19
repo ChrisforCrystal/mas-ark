@@ -1,0 +1,104 @@
+---
+title: Observability
+description: Monitor and trace your agentic workloads with integrated observability solutions
+---
+
+# Observability
+
+Comprehensive observability is crucial for production agentic workloads. ARK provides integrated monitoring, tracing, and logging capabilities to help you understand and optimize your AI agent performance.
+
+## OpenTelemetry Integration
+
+ARK provides observability through OpenTelemetry integration, allowing you to monitor and trace all operations across the controller, execution engines and any other services. You can connect to any OpenTelemetry-compatible provider using standard environment variables.
+
+Telemetry is enabled by setting the OpenTelemetry environment variables:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP endpoint URL | `http://localhost:4318/v1/traces` |
+| `OTEL_EXPORTER_OTLP_HEADERS` | Authentication headers | `Authorization=Basic <token>` |
+| `OTEL_SERVICE_NAME` | Service name for telemetry | `ark-controller` |
+| `OTEL_RESOURCE_ATTRIBUTES` | Additional resource attributes | `environment=production` |
+
+## Architecture
+
+Some queries go directly from the controller to the OTEL endpoint, while others flow through execution engines when multi-framework agent orchestration is used.
+
+```
+  OTEL Env Vars
+┌─────────────────┐
+│  ARK Controller │
+└─────────┬───────┘
+          │
+          ├─── → Query Executor → OTEL Endpoint
+          │
+          └─── → Query Executor → Execution Engine → OTEL Endpoint
+  OTEL Env Vars
+┌─────────────────────────┐
+│ Services, Engines, etc  ├─── → OTEL Endpoint
+└─────────────────────────┘
+```
+
+
+
+## Automatic Injection of OTEL Configuration
+
+One way to set up automatic OpenTelemetry configuration is through standardized ConfigMap and Secret references. This pattern allows any Kubernetes resource to automatically pick up OTEL environment variables when available:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+spec:
+  template:
+    spec:
+      containers:
+      - name: your-app
+        envFrom:
+        # Standard OTEL configuration - will be injected if available
+        - configMapRef:
+            name: otel-environment-variables
+            optional: true
+        - secretRef:
+            name: otel-environment-variables
+            optional: true
+```
+
+When you create or update the standardized `otel-environment-variables` ConfigMap and Secret, all deployments and pods that reference them must be restarted to pick up the new environment variables:
+
+```bash
+# Restart components to pick up changes
+kubectl rollout restart deployment/ark-controller -n ark-system
+```
+
+### Service Name Configuration
+
+You can optionally set the service name used for telemetry in your containers, using the `OTEL_SERVICE_NAME` variable:
+
+```yaml
+spec:
+  template:
+    spec:
+      containers:
+      - name: your-app
+        env:
+        - name: OTEL_SERVICE_NAME
+          value: "my-custom-service"
+```
+
+### Additional OTEL Variables
+
+These OpenTelemetry environment variables are also supported:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `OTEL_RESOURCE_ATTRIBUTES` | Additional resource attributes | `environment=production,version=1.0` |
+| `OTEL_EXPORTER_OTLP_TIMEOUT` | Request timeout in milliseconds | `30000` |
+| `OTEL_PROPAGATORS` | Trace context propagation format | `tracecontext,baggage` |
+| `OTEL_TRACES_SAMPLER` | Sampling strategy | `always_on`, `always_off`, `traceidratio` |
+| `OTEL_TRACES_SAMPLER_ARG` | Sampler configuration | `0.1` (for 10% sampling) |
+
+---
+
+**Next**: Learn about observability options:
+- **[Phoenix Service](/developer-guide/observability/phoenix-service)** - AI/ML model observability and evaluation
+- **[Langfuse Service](/developer-guide/observability/langfuse-service)** - Open Source LLM Application/Agent observability, evaluation, and prompt management

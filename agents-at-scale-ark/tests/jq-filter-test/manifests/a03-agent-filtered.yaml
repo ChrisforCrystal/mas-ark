@@ -1,0 +1,15 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: test-agent-jq-filtered
+spec:
+  description: Test agent with jq filtering on tool responses
+  prompt: |
+    You are a test agent. Use the test-json-api tool to get data and respond with the results verbatim, as is
+    without any remarks and pre-amble.
+  tools:
+  - type: http
+    name: test-json-api
+    functions:
+    - name: jq
+      value: '.slideshow.title'

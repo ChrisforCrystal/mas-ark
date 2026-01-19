@@ -1,0 +1,298 @@
+# Tools
+
+Tools extend agent capabilities by providing access to external functions, APIs, and services.
+
+## Tool Resource Types
+
+### HTTP Tools
+
+HTTP API calls with URL and body template substitution.
+
+#### GET Request Example
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Tool
+metadata:
+  name: get-coordinates
+spec:
+  type: http
+  inputSchema:
+    type: object
+    properties:
+      city:
+        type: string
+        description: City name to get coordinates for
+    required: ["city"]
+  description: "Returns coordinates for the given city name"
+  http:
+    url: https://geocoding-api.open-meteo.com/v1/search?name={city}&count=1
+    method: GET
+    timeout: 30s
+```
+
+#### POST Request with Body Template Example
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Tool
+metadata:
+  name: create-user
+spec:
+  type: http
+  inputSchema:
+    type: object
+    properties:
+      name:
+        type: string
+        description: User name
+      email:
+        type: string
+        description: User email
+    required: ["name", "email"]
+  description: "Creates a new user"
+  http:
+    url: https://api.example.com/users
+    method: POST
+    headers:
+      - name: "Content-Type"
+        value:
+          value: "application/json"
+    body: |
+      {
+        "name": "{{.input.name}}",
+        "email": "{{.input.email}}",
+        "created_at": "{{.timestamp}}",
+        "organization": "{{.default_org}}"
+      }
+    bodyParameters:
+      - name: timestamp
+        value: "2024-01-01T00:00:00Z"
+      - name: default_org
+        valueFrom:
+          configMapKeyRef:
+            name: user-config
+            key: default-organization
+    timeout: 30s
+```
+
+## Template Syntax
+
+HTTP tools support golang template syntax for dynamic content generation:
+
+### Template Data Structure
+
+Templates have access to structured data:
+
+- **`.input.fieldName`** - User input from the inputSchema
+- **`.parameterName`** - Values from bodyParameters
+
+### Parameter Sources
+
+```yaml
+bodyParameters:
+  # Direct values
+  - name: api_version
+    value: "v1.0"
+
+  # ConfigMap references
+  - name: endpoint
+    valueFrom:
+      configMapKeyRef:
+        name: api-config
+        key: base-url
+
+  # Secret references
+  - name: token
+    valueFrom:
+      secretKeyRef:
+        name: api-secrets
+        key: auth-token
+```
+
+### Builtin Tools
+
+System-provided tools with predefined functionality.
+
+#### Noop Tool Example
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Tool
+metadata:
+  name: noop
+spec:
+  type: builtin
+  description: "A no-operation tool that does nothing and returns success"
+  inputSchema:
+    type: object
+    properties:
+      message:
+        type: string
+        description: Optional message to include in the response
+  builtin:
+    name: noop
+```
+
+#### Terminate Tool Example
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Tool
+metadata:
+  name: terminate
+spec:
+  type: builtin
+  description: "Terminates the conversation"
+  inputSchema:
+    type: object
+    properties:
+      response:
+        type: string
+        description: The response to send before terminating the conversation
+    required: ["response"]
+  builtin:
+    name: terminate
+```
+
+Available builtin tools:
+- **noop** - No-operation tool for testing and debugging
+- **terminate** - Ends conversation with final response
+
+### MCP Tools
+
+Tools provided by Model Context Protocol servers.
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Tool
+metadata:
+  name: mcp-filesystem-read-file
+spec:
+  type: mcp
+  inputSchema:
+    type: object
+    properties:
+      path:
+        type: string
+        description: File path to read
+    required: ["path"]
+  description: "Read contents of a file"
+  mcp:
+    mcpServerRef:
+      name: filesys-server
+      namespace: default
+    toolName: read_file
+```
+
+### Agent as Tools
+
+Agents can be declared and exposed as tools, which means they can be called by other agents in the system.This lets one agent delegate a task to another specialized agent instead of handling everything itself.Also, this lets an agent behave like an API, handling specific, self-contained tasks without being burdened by irrelevant context, which makes development simpler.
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Tool
+metadata:
+  name: call-research-agent
+spec:
+  type: agent
+  inputSchema:
+    type: object
+    properties:
+      input:
+        type: string
+        description: "The research query or topic that the agent should investigate and provide insights on."
+    required: ["input"]
+  agent:
+    name: research-agent
+```
+
+### Team as Tools
+
+Teams can be declared and exposed as tools, which means they can be called by agents in the system. This lets an agent delegate complex multi-agent workflows to a team, enabling sophisticated orchestration patterns where agents can leverage entire teams as reusable tools.
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Tool
+metadata:
+  name: research-team-tool
+spec:
+  type: team
+  description: Multi-agent team that researches a topic and provides analysis
+  inputSchema:
+    type: object
+    properties:
+      input:
+        type: string
+        description: "The topic to research"
+    required: ["input"]
+  team:
+    name: research-team
+```
+
+## Agent Tool Reference Types
+
+Agents reference tools using the `tools` field in their spec. Tools are referenced by name and type, where the type matches the Tool resource type.
+
+### Tool References
+
+Reference Tool resources using the same type as defined in the Tool resource:
+
+```yaml
+tools:
+  - type: http
+    name: get-coordinates            # HTTP tool
+  - type: mcp
+    name: mcp-filesystem-read-file   # MCP tool
+  - type: agent
+    name: call-research-agent        # Agent tool
+  - type: team
+    name: research-team-tool         # Team tool
+  - type: builtin
+    name: noop                       # Builtin tool
+```
+
+**Note**: `type: custom` is deprecated. Use the explicit tool type instead.
+
+### Built-in Tools
+
+Reference system-provided builtin tools by name:
+
+```yaml
+tools:
+  - type: built-in
+    name: terminate  # End conversation with final response
+  - type: built-in
+    name: noop       # No-operation (testing/debugging)
+```
+
+Note: Built-in tools must be defined as Tool resources with `type: builtin` before they can be referenced by agents.
+### Agent as Tools
+
+Agent used as tools:
+
+```yaml
+tools:
+  - type: agent
+    name: call-research-agent
+```
+
+### Partial tools
+
+The partial tool calling feature in allows to pre-configure certain parameters of a tool at the agent configuration level, while leaving other parameters to be filled by the Agent at runtime. This enables parameter injection, template resolution, and simplified tool interfaces for the Agents.
+
+```yaml
+tools:
+  - type: http
+    name: weather-forecast  # Name exposed to Agent
+    description: "Get latest weather forecast"  # Description exposed to Agent
+    partial:
+      name: weather-api  # Actual Tool CRD name (type: http)
+      parameters:
+        - name: city
+          value: "{{ .Query.city }}"  # From query parameters
+        - name: units
+          value: "metric"  # Static value
+        - name: language
+          value: nil  # Explicitly exclude parameter to be provided by Agent
+```

@@ -1,0 +1,9 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: invalid-query-missing-input
+spec:
+  # Missing required 'input' field - should fail admission
+  target:
+    type: agent
+    name: nonexistent-agent

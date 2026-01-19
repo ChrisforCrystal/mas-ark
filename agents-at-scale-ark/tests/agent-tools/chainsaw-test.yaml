@@ -1,0 +1,108 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: agent-tools
+spec:
+  description: Test agent with weather tool functionality
+  timeouts:
+    apply: 30s
+    assert: 120s
+  steps:
+  - name: setup-mock-llm
+    try:
+    - script:
+        content: |
+          helm install mock-llm oci://ghcr.io/dwmkerr/charts/mock-llm \
+            --version 0.1.27 \
+            --namespace $NAMESPACE \
+            --values mock-llm-values.yaml \
+            --wait --timeout=120s
+        env:
+        - name: NAMESPACE
+          value: ($namespace)
+    - script:
+        content: |
+          helm install ark-tenant ../../charts/ark-tenant --namespace $NAMESPACE --create-namespace --wait
+        env:
+        - name: NAMESPACE
+          value: ($namespace)
+    catch:
+    - events: {}
+
+  - name: wait-for-model
+    try:
+    # Wait for mock-llm Model to be available before applying dependent resources
+    - assert:
+        resource:
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Model
+          metadata:
+            name: test-model
+          status:
+            conditions:
+            - type: ModelAvailable
+              status: "True"
+    catch:
+    - script:
+        content: |
+          echo "=== Model not ready ==="
+          kubectl get model -n $NAMESPACE -o yaml 2>/dev/null || true
+        env:
+        - name: NAMESPACE
+          value: ($namespace)
+
+  - name: deploy-resources
+    try:
+    - apply:
+        file: manifests/a01-weather-tool.yaml
+    - apply:
+        file: manifests/a02-weather-agent.yaml
+    - apply:
+        file: manifests/a03-weather-query.yaml
+    catch:
+    - events: {}
+
+  - name: verify-resources
+    try:
+    - assert:
+        resource:
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Tool
+          metadata:
+            name: weather-tool
+    - assert:
+        resource:
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Agent
+          metadata:
+            name: weather-agent
+    - assert:
+        resource:
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            name: weather-query
+          status:
+            (conditions[?type == 'Completed']):
+            - status: 'True'
+    - assert:
+        resource:
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            name: weather-query
+          status:
+            (response != null): true
+            (response.target.name): 'weather-agent'
+            (length(response.content) > `10`): true
+    catch:
+    - events: {}
+    - script:
+        content: |
+          echo "=== Debug: Checking resources ==="
+          kubectl get model,agent,tool,query -n $NAMESPACE 2>/dev/null || true
+          kubectl describe query weather-query -n $NAMESPACE 2>/dev/null || echo "Query not found"
+          kubectl logs -l app.kubernetes.io/name=mock-llm -n $NAMESPACE --tail=50 2>/dev/null || true
+        env:
+        - name: NAMESPACE
+          value: ($namespace)

@@ -1,0 +1,11 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: MCPServer
+metadata:
+  name: invalid-mcpserver-invalid-header
+spec:
+  address:
+    value: http://localhost:8080
+  headers:
+  - name: Authorization
+    value:
+      # Missing both value and valueFrom - should fail admission

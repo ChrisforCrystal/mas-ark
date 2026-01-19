@@ -1,0 +1,140 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: research-team
+spec:
+  steps:
+    - name: setup-prerequisites
+      try:
+        # Create the web search tool that agents depend on
+        - apply:
+            file: "../../tools/web-search-tool.yaml"
+        - assert:
+            resource:
+              apiVersion: ark.mckinsey.com/v1alpha1
+              kind: Tool
+              metadata:
+                name: web-search
+        
+        # Setup Azure credentials for model
+        - script:
+            skipLogOutput: true
+            content: |
+              set -u
+              echo "{\"token\": \"$E2E_TEST_AZURE_OPENAI_KEY\", \"url\": \"$E2E_TEST_AZURE_OPENAI_BASE_URL\"}"
+            outputs:
+            - name: azure
+              value: (json_parse($stdout))
+        
+        # Create model secret and model that agents depend on
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: default-model-token
+              type: Opaque
+              data:
+                token: (base64_encode($azure.token))
+        
+        - apply:
+            resource:
+              apiVersion: ark.mckinsey.com/v1alpha1
+              kind: Model
+              metadata:
+                name: default
+              spec:
+                type: azure
+                model:
+                  value: gpt-4.1-mini
+                config:
+                  azure:
+                    baseUrl:
+                      value: ($azure.url)
+                    apiKey:
+                      valueFrom:
+                        secretKeyRef:
+                          name: default-model-token
+                          key: token
+                    apiVersion:
+                      value: "2024-12-01-preview"
+        
+        # Create the agents that the team depends on (excluding creator for now)
+        - apply:
+            file: "../../agents/researcher-agent.yaml"
+        - apply:
+            file: "../../agents/analyst-agent.yaml"
+        # Note: creator-agent requires MCP filesystem server, tested in integration
+        
+        # Validate agents exist
+        - assert:
+            resource:
+              apiVersion: ark.mckinsey.com/v1alpha1
+              kind: Agent
+              metadata:
+                name: researcher
+        - assert:
+            resource:
+              apiVersion: ark.mckinsey.com/v1alpha1
+              kind: Agent
+              metadata:
+                name: analyst
+
+    - name: apply-test-team
+      try:
+        # Create a test version of the team with only available agents
+        - apply:
+            file: "test-team.yaml"
+        
+        # Validate test team configuration
+        - assert:
+            resource:
+              apiVersion: ark.mckinsey.com/v1alpha1
+              kind: Team
+              metadata:
+                name: research-analysis-team-test
+                labels:
+                  category: research
+                  workflow: sequential
+                  environment: test
+              spec:
+                description: Sequential team for research and analysis workflow (test version with 2 agents)
+                strategy: sequential
+                maxTurns: 2
+                members:
+                - name: researcher
+                  type: agent
+                - name: analyst
+                  type: agent
+        
+        # Validate team structure
+        - assert:
+            resource:
+              apiVersion: ark.mckinsey.com/v1alpha1
+              kind: Team
+              metadata:
+                name: research-analysis-team-test
+              spec:
+                (length(members)): 2
+                (members[0].name): researcher
+                (members[1].name): analyst
+        
+        - script:
+            content: |
+              echo "✓ Research team test created successfully:"
+              echo "  - Team name: research-analysis-team-test"
+              echo "  - Strategy: sequential"
+              echo "  - Max turns: 2"
+              echo "  - Members: researcher → analyst"
+              echo ""
+              echo "Note: This tests team functionality with available agents."
+              echo "      The full team (including creator agent) will be"
+              echo "      tested in the integration test with MCP filesystem."
+              echo ""
+              echo "Team is ready for query execution"
+      
+      catch:
+        - describe:
+            apiVersion: ark.mckinsey.com/v1alpha1
+            kind: Team
+            name: research-analysis-team-test

@@ -1,0 +1,10 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: test-query-label-selector
+spec:
+  input: What is the weather like today and what mathematical concepts should I know?
+  selector:
+    matchLabels:
+      environment: production
+      type: specialist

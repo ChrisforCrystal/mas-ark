@@ -1,0 +1,55 @@
+# GitHub Team
+
+This sample shows how to create a team of agents that can work with code in a GitHub repository:
+
+- Two simple agents are created - a code reviewer and a repository accessor
+- A GitHub team is created
+- Agents are given access to GitHub via the GitHub MCP server
+- Requests can be made to the team to ask them to improve code, such as adding documentation
+
+## Setup
+
+Run the quickstart command to get your cluster up and running:
+
+```bash
+devspace dev
+```
+
+You can now create your agents, teams and MCP servers by loading in the `github-team.yaml` file. Given that this sample needs a GitHub Personal Access token, it should be applied to your resources, the `envsubst` command simply replaces `${GITHUB_PAT}` in the sample YAML file:
+
+```bash
+export GITHUB_PAT="your-token"
+envsubst < samples/teams/github-team.yaml | kubectl apply -f -
+```
+
+At this point your team is ready! You can send a request to an individual agent like so:
+
+```bash
+fark agent github-repo-accessor 'what is my most popular repo'
+```
+
+> github-repo-accessor: Your most popular GitHub repository is "hacker-laws" with 26,682 stars.
+
+This query will take a few seconds- in the meantime you can explore what is going on in the cluster by using a tool like `k9s` and looking at the agents, teams or queries.
+
+To query the entire team, just pass a message to the team rather than the agent:
+
+```bash
+fark team github-team 'describe the most recent PR on my most popular repo'
+```
+
+> github-team: The most recent pull request on your most popular repository "hacker-laws" includes a bug fix that corrects the mistranslation of Hyrum’s Law in Japanese.
+
+You can check the events associated with the team to see the detailed conversation history:
+
+```bash
+kubectl get events -o json | jq -r '.items[] | select(.message | contains("github-team")) | "\(.lastTimestamp) \(.type) \(.reason) \(.message)"' | sort
+```
+
+## Cleanup
+
+Delete the GitHub team resources:
+
+```bash
+kubectl delete -f samples/teams/github-team.yaml
+```

@@ -1,0 +1,152 @@
+# ARK Dashboard chart values
+
+# Global annotations added to all resources
+global:
+  annotations:
+    ark.mckinsey.com/service: ark-dashboard
+
+# Application configuration
+app:
+  name: ark-dashboard
+  image:
+    repository: ghcr.io/mckinsey/agents-at-scale-ark/ark-dashboard
+    # tag defaults to .Chart.AppVersion if not specified
+    pullPolicy: IfNotPresent
+
+  # Well-known config variables, usually set as environment variables
+  config:
+    nodeEnv: "production"
+    port: "3000"
+    hostname: "0.0.0.0"
+    arkApiService:
+      host: "ark-api"
+      port: "80"
+      protocol: "http"
+  
+  # Other environment variables
+  env:
+    # Authentication configuration
+    - name: BASE_URL
+      value: ""
+    - name: AUTH_URL
+      value: ""
+    - name: AUTH_SECRET
+      value: ""
+    - name: OIDC_ISSUER_URL
+      value: ""
+    - name: OIDC_CLIENT_ID
+      value: ""
+    - name: OIDC_CLIENT_SECRET
+      value: ""
+    - name: OIDC_PROVIDER_NAME
+      value: ""
+    - name: OIDC_PROVIDER_ID
+      value: ""
+    - name: SESSION_MAX_AGE
+      value: ""
+    - name: NEXT_PUBLIC_TOKEN_REFRESH_INTERVAL_MS
+      value: "600000" #10 mins
+    - name: NEXT_PUBLIC_FALLBACK_INACTIVITY_TIMEOUT
+      value: "1800000" #30 mins
+    - name: AUTH_MODE
+      value: "open"
+  
+  # Optional: Import entire secrets/configmaps as env vars
+  # envFrom:
+  #   - secretRef:
+  #       name: dashboard-secrets
+  #       optional: true
+  
+  # Resource configuration
+  # For production: Dashboard serves pre-built static files so memory can be low
+  # For in-cluster local development: Increase limits to at least 1.5GB for Next.js + Turbopack compilation
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"  # Production: pre-built files are memory efficient
+      cpu: "500m"
+
+  # L2 FIX: Pod security context for hardening
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1001
+    fsGroup: 1001
+    seccompProfile:
+      type: RuntimeDefault
+
+  # L2 FIX: Container security context for hardening
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false  # Next.js needs writable filesystem
+    capabilities:
+      drop:
+        - ALL
+
+# Service account configuration
+serviceAccount:
+  create: true
+  name: ark-dashboard-sa
+
+# Service configuration
+service:
+  name: ark-dashboard
+  type: ClusterIP
+  port: 3000
+  targetPort: 3000
+
+# Ingress configuration (legacy routing method)
+# Disabled by default. Use this for traditional Kubernetes Ingress routing.
+# For newer deployments, consider using HTTPRoute (below) with Gateway API instead.
+ingress:
+  enabled: false
+  className: ""  # e.g., "nginx", "traefik", "kong"
+  annotations:
+    # Security headers for clickjacking protection (M1) and general hardening (L3)
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: DENY";
+      more_set_headers "Content-Security-Policy: frame-ancestors 'none'";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+      more_set_headers "Strict-Transport-Security: max-age=31536000; includeSubDomains";
+      more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: dashboard.example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+  #  - secretName: dashboard-tls
+  #    hosts:
+  #      - dashboard.example.local
+
+# HTTPRoute configuration (Gateway API - modern routing method)
+# Disabled by default. This is the preferred routing method for Kubernetes 1.23+
+# with Gateway API CRDs installed. Example values below show localhost development setup.
+httpRoute:
+  enabled: false
+  annotations: {}
+    # Custom annotations can be added here
+  # Gateway references
+  parentRefs:
+    - name: localhost-gateway
+      namespace: ark-system
+      # sectionName: http  # optional, for specific listener
+  # Hostnames this route matches
+  hostnames:
+    - "127.0.0.1.nip.io"
+    - "dashboard.127.0.0.1.nip.io"
+    - "dashboard.default.127.0.0.1.nip.io"
+  # Routing rules (if not specified, defaults to routing all paths to the service)
+  # rules:
+  #   - matches:
+  #       - path:
+  #           type: PathPrefix
+  #           value: /
+  #     backendRefs:
+  #       - name: ark-dashboard
+  #         port: 3000

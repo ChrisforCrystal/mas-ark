@@ -1,0 +1,14 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: test-agent
+spec:
+  modelRef:
+    name: mock-gpt-4.1
+  prompt: |
+    Your name is {{.agent_name}}.
+  parameters:
+    - name: agent_name
+      valueFrom:
+        queryParameterRef:
+          name: your_name

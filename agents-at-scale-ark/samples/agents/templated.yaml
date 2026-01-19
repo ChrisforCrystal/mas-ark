@@ -1,0 +1,26 @@
+# Templated Agent Example - Demonstrates Agent Parameter Template Processing
+# This agent shows how to use template parameters with both direct values and ConfigMap references.
+# The prompt field uses Go template syntax to inject parameter values at runtime.
+
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: templated
+spec:
+  parameters:
+    # Direct value parameter - immediate customization
+    - name: prefix
+      value: Always say Bazinga.
+    
+    # ConfigMap reference parameter - shared configuration
+    - name: suffix
+      valueFrom:
+        configMapKeyRef:
+          name: shared
+          key: suffix
+  
+  # Template prompt using Go template syntax
+  # Parameters are accessed as {{.parameterName}}
+  prompt: |
+    You are a helpful agent. {{.prefix}}
+    {{.suffix}}

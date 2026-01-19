@@ -1,0 +1,37 @@
+# Building Flows
+
+This page contains useful guiding principles on how to develop effective flows.
+
+**Start Simple**
+
+Build tools, test them. Build MCP servers then test. Attach tools to agents then test, then scale up to teams.
+
+**Keep agents specific**
+
+The more specialised an agent, the more likely it is to work in a predictable fashion. This limits 'chattiness' between agents, which can slow sessions and greatly increases token use.
+
+**Understand when to terminate work**
+
+Create specific conditions to terminate execution, as teams can call each other recursively and sessions can run indefinitely if the proper conditions are not set.
+
+**Limit context to agents and teams**
+
+Limit the context given to agents and teams to the minimum required, so that instructions to LLMs are as targeted as possible.
+
+**Externalise content from context**
+
+Context is typically user-editable instructions, followed by the inputs and outputs to and from agents and teams. Context can rapidly grow with 'chatty' systems. If content can be _externalised_ from context, this means it can be retrieved on-demand only when needed.
+
+For example, if a set of testing guidelines must be followed, these guidelines _could_ be noted in the instructions for a testing agent, OR they could be externalised into a markdown file in a repository. The content can then be accessed with a 'Testing Guidelines' tool.
+
+Externalising content from context allows it to be version controlled, shared across teams and agents, and be used by other parts of the organisation.
+
+**Start simple, then scale out**
+
+The system is designed to allow users to very rapidly prototype, test, iterate and refine the development of use cases.
+
+Once a use case has been developed and proven, there are steps that can be taken to allow it to scale. For example:
+
+_Tip: this content will be expanded into a dedicated 'building scalable use-cases' guide_
+
+- Local execution can be offloaded to dedicated services: for example, a tool that uses pytorch locally to process PDF documents enables quick iteration. However, tools like this use large amounts of memory and CPU, and risk over-loading the underlying cluster. To scale out, the PDF processing would be externalised to a dedicated system or container, and the tool would act as an interface to the dedicated system.

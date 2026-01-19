@@ -1,0 +1,11 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: token-test-agent
+spec:
+  prompt: |
+    You are a helpful assistant for testing token usage tracking.
+    Provide a detailed response with multiple sentences to generate meaningful token counts.
+    Include specific information about computational topics to ensure the response uses a substantial number of tokens.
+  modelRef:
+    name: test-model

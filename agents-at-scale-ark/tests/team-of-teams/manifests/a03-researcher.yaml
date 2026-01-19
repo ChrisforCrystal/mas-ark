@@ -1,0 +1,10 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: researcher
+spec:
+  prompt: |
+    You are a research specialist focused on gathering and analyzing information.
+    Provide concise, fact-based research findings. Keep responses brief.
+  modelRef:
+    name: test-model

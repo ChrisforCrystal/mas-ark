@@ -1,0 +1,12 @@
+name: ark-api
+description: API to interface with ARK resources
+supports:
+  - dev
+  - install
+  - uninstall
+  - build-test
+commands:
+  install:
+    - make ark-api-install
+  dev:
+    - make ark-api-dev

@@ -1,0 +1,102 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ark-controller-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - secrets
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - list
+  - patch
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  verbs:
+  - impersonate
+- apiGroups:
+  - ark.mckinsey.com
+  resources:
+  - a2aservers
+  - a2atasks
+  - evaluations
+  - evaluators
+  - executionengines
+  - mcpservers
+  - memories
+  - models
+  - queries
+  - teams
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ark.mckinsey.com
+  resources:
+  - a2aservers/finalizers
+  - a2atasks/finalizers
+  - agents/finalizers
+  - evaluations/finalizers
+  - evaluators/finalizers
+  - executionengines/finalizers
+  - mcpservers/finalizers
+  - memories/finalizers
+  - models/finalizers
+  - queries/finalizers
+  - teams/finalizers
+  - tools/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ark.mckinsey.com
+  resources:
+  - a2aservers/status
+  - a2atasks/status
+  - agents/status
+  - evaluations/status
+  - evaluators/status
+  - executionengines/status
+  - mcpservers/status
+  - memories/status
+  - models/status
+  - queries/status
+  - teams/status
+  - tools/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ark.mckinsey.com
+  resources:
+  - agents
+  - tools
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch

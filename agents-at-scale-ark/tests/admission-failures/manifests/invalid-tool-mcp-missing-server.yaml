@@ -1,0 +1,13 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Tool
+metadata:
+  name: invalid-tool-mcp-missing-server
+spec:
+  type: mcp
+  inputSchema:
+    type: object
+    properties:
+      param:
+        type: string
+  mcp:
+    toolName: test-tool  # Missing MCPServerRef name - should fail admission

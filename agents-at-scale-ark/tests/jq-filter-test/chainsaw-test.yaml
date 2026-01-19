@@ -1,0 +1,111 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: jq-filter-test
+spec:
+  skip: true
+  description: Test jq filtering functionality in agent tools
+  steps:
+  - name: setup-resources
+    try:
+    - script:
+        skipLogOutput: true
+        content: |
+          set -u
+          echo "{\"token\": \"$E2E_TEST_AZURE_OPENAI_KEY\", \"url\": \"$E2E_TEST_AZURE_OPENAI_BASE_URL\"}"
+        outputs:
+        - name: azure
+          value: (json_parse($stdout))
+    - script:
+        content: |
+          helm install ark-tenant ../../charts/ark-tenant --namespace $NAMESPACE --create-namespace --wait
+        env:
+        - name: NAMESPACE
+          value: ($namespace)
+    - apply:
+        file: manifests/*.yaml
+
+  - name: wait-for-agents
+    try:
+    - assert:
+        resource:
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Agent
+          metadata:
+            name: test-agent-jq-filtered
+    - assert:
+        resource:
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Agent
+          metadata:
+            name: test-agent-unfiltered
+
+  - name: execute-queries
+    try:
+    - apply:
+        file: manifests/a04-query-filtered.yaml
+    - apply:
+        file: manifests/a05-query-unfiltered.yaml
+
+  - name: wait-for-filtered-query-completion
+    try:
+    - assert:
+        resource:
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            name: test-query-jq-filtered
+          status:
+            (conditions[?type == 'Completed']):
+            - status: 'True'
+    catch:
+    - events: {}
+    - describe:
+        apiVersion: ark.mckinsey.com/v1alpha1
+        kind: Query
+        name: test-query-jq-filtered
+
+  - name: wait-for-unfiltered-query-completion
+    try:
+    - assert:
+        resource:
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            name: test-query-unfiltered
+          status:
+            (conditions[?type == 'Completed']):
+            - status: 'True'
+    catch:
+    - events: {}
+    - describe:
+        apiVersion: ark.mckinsey.com/v1alpha1
+        kind: Query
+        name: test-query-unfiltered
+
+  - name: validate-responses
+    try:
+    - assert:
+        resource:
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            name: test-query-jq-filtered
+          status:
+            (response != null): true
+            (contains(response.content, 'Sample Slide Show')): true
+            responses:
+            - target:
+                name: test-agent-jq-filtered
+                type: agent
+    - assert:
+        resource:
+          apiVersion: ark.mckinsey.com/v1alpha1
+          kind: Query
+          metadata:
+            name: test-query-unfiltered
+          status:
+            (response != null): true
+            (contains(response.content, 'slideshow')): true
+            (contains(response.content, 'author')): true
+            (contains(response.content, 'slides')): true

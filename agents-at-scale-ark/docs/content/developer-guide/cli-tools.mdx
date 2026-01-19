@@ -1,0 +1,352 @@
+---
+title: CLI Tools
+description: Command-line interfaces for interacting with ARK agents, teams, and resources
+---
+
+# CLI Tools
+
+ARK provides two command-line tools for different use cases.
+
+## Overview
+
+### [fark](#fark) - Fast Agentic Runtime Kit
+The primary tool for querying agents and teams, plus CRUD operations on ARK resources.
+
+### [ark](#ark-cli) - ARK Management Interface
+Interactive dashboard and system status monitoring tool.
+
+## fark
+
+`fark` is the primary CLI tool for querying agents and teams, plus managing ARK resources.
+
+### Installation
+
+#### From GitHub Release (Recommended)
+```bash
+# Download latest release for your platform
+# Linux/macOS
+curl -L "https://github.com/mckinsey/agents-at-scale-ark/releases/latest/download/fark_$(uname)_$(uname -m | sed 's/aarch64/arm64/').tar.gz" | tar xz
+sudo mv fark /usr/local/bin/
+
+# Windows: Download fark_Windows_x86_64.zip from releases page
+
+# Verify installation
+fark --help
+```
+
+#### From Source
+```bash
+# Clone and build from repository
+git clone https://github.com/mckinsey/agents-at-scale-ark.git
+cd agents-at-scale-ark
+make fark-install
+
+# Verify installation
+fark --help
+```
+
+### Querying Agents and Teams
+
+#### Agent Queries
+```bash
+# Basic agent query
+fark agent weather "What's the weather today?"
+
+# Math calculations
+fark agent math "What is 15 * 23?"
+
+# Location queries (uses get-coordinates tool)
+fark agent location "Where is Paris?"
+
+# Query with file input
+fark agent weather -f input.txt "Analyze this weather data"
+
+# Query with session and conversation management (requires memory service)
+fark agent weather "What's the weather in NYC?" --session-id weather-session --conversation-id weather-conv
+fark agent weather "How about tomorrow?" --session-id weather-session --conversation-id weather-conv
+```
+
+#### Team Queries
+```bash
+# Basic team query
+fark team team-seq "Process this request"
+
+# Query team with multiple agents
+fark team team-seq "Calculate 2+2 and explain the result"
+```
+
+#### Query Management
+```bash
+# List all queries
+fark query
+
+# Trigger existing query
+fark query weather-query
+
+# Trigger with new input
+fark query weather-query "What's the weather in London?"
+```
+
+### Resource Management
+
+#### Listing Resources
+```bash
+# List all agents
+fark get agent
+
+# List all teams
+fark get team
+
+# List all models
+fark get model
+
+# List all tools
+fark get tool
+
+# Get specific resource details
+fark get agent weather
+```
+
+#### Creating Resources
+```bash
+# Create agent from file
+fark create agent my-agent -f samples/agents/math.yaml
+
+# Create agent with prompt
+fark create agent my-math --prompt "You're an agent helping with calculations" --model default
+
+# Create agent with tools
+fark create agent my-location --prompt "Help with location queries" --tools get-coordinates
+```
+
+#### Updating Resources
+```bash
+# Update agent from file
+fark update agent math -f updated-agent.yaml
+
+# Update agent prompt
+fark update agent math --prompt "You're an advanced mathematical assistant"
+```
+
+#### Deleting Resources
+```bash
+# Delete specific agent
+fark delete agent math
+
+# Delete team
+fark delete team team-seq
+```
+
+### Output Options
+```bash
+# JSON output
+fark agent math "What is 5 + 3?" --json
+
+# Verbose logging (shows token usage)
+fark agent math "What is 5 + 3?" --verbose
+
+# Silent mode (suppress event logging)
+fark agent math "What is 5 + 3?" --silent
+```
+
+### Server Mode
+fark can also run as an HTTP server providing REST API endpoints:
+
+```bash
+# Start server on default port 8080
+fark server
+
+# Start server on custom port
+fark server --port 9090
+```
+
+### Shell Completion
+```bash
+# Install completion for zsh
+fark completion zsh > ~/.fark-completion
+echo "source ~/.fark-completion" >> ~/.zshrc
+source ~/.zshrc
+
+# Install completion for bash
+fark completion bash > /etc/bash_completion.d/fark
+```
+
+## ark CLI
+
+`ark` provides an interactive dashboard and system monitoring capabilities.
+
+### Installation
+
+```bash
+# Build and install from repository root
+make ark-cli-install
+
+# Verify installation
+ark --help
+```
+
+### Interactive Menu
+
+Launch the interactive menu interface:
+
+```bash
+ark
+```
+
+### System Status
+
+Check the status of ARK services and components:
+
+```bash
+# Check overall system status
+ark status
+```
+
+## Common Use Cases
+
+### Development Workflow
+```bash
+# Create and test an agent
+fark create agent test-math --prompt "You are a helpful math assistant"
+fark agent test-math "What is 2 + 2?"
+
+# Update and retest
+fark update agent test-math --prompt "You are an advanced mathematical assistant"
+fark agent test-math "Calculate the square root of 16"
+
+# Clean up
+fark delete agent test-math
+```
+
+### Production Monitoring
+```bash
+# Check system health
+ark status
+
+# Monitor specific resources
+fark get agent
+fark get team
+
+# Query agents with structured output
+fark agent weather "What's the weather?" --json
+```
+
+## k9s
+
+k9s is a terminal-based UI for Kubernetes that lets you interactively manage and work with your cluster. It provides a visual interface to navigate, inspect, and modify Kubernetes resources including ARK resources such as agents, teams, models, and queries without memorizing complex kubectl commands.
+
+### Installation
+
+k9s can be installed separately and launched from your terminal. First, ensure your development environment is running:
+
+```bash
+# start development environment
+devspace dev
+# launch k9s
+k9s
+```
+
+### Useful Commands
+
+| Command | Description |
+|---------|-------------|
+| `?` | Show help and all available commands |
+| `:crds` | Show all custom resource definitions (CRDs) including agents, models, teams |
+| `:agents` | Show all agents in the cluster |
+| `:models` | Show all models in the cluster |
+| `:teams` | Show all teams in the cluster |
+| `:pods` | Show all pods |
+| `:svc` | Show all services |
+| `:deploy` | Show all deployments |
+| `d` | Describe the selected resource |
+| `Shift+J` | Jump to owner (eg Agent → MCP Server) |
+| `Shift+A` | Sort resources by age |
+| `e` | Edit the selected resource |
+| `Ctrl+D` | Delete the selected resource |
+| `l` | View logs for the selected pod |
+| `s` | Shell into the selected pod |
+| `/` | Filter resources by name |
+| `Escape` | Go back to previous view |
+
+Navigate to any resource type by typing `:` followed by the resource name. Use the arrow keys to select resources and the commands above to interact with them.
+
+## kubectl
+
+`kubectl` is the command-line tool for interacting with Kubernetes clusters. It's essential for managing ARK resources and troubleshooting applications.
+
+### Installation
+
+```bash
+# macOS
+brew install kubectl
+
+# Linux
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+chmod +x kubectl
+sudo mv kubectl /usr/local/bin/
+
+# Windows
+choco install kubernetes-cli
+```
+
+### Basic Commands
+
+#### View ARK Resources
+
+```bash
+# List all pods in the default namespace
+kubectl get pods
+
+# List all ARK custom resources
+kubectl get queries,agents,teams,models
+
+# Get detailed information about a specific query
+kubectl describe query my-query
+```
+
+#### Logs and Debugging
+
+```bash
+# View logs from a pod
+kubectl logs pod-name
+
+# Follow logs in real-time
+kubectl logs -f pod-name
+
+# Execute commands in a running container
+kubectl exec -it pod-name -- /bin/bash
+```
+
+#### Managing Resources
+
+```bash
+# Apply an ARK configuration
+kubectl apply -f my-query.yaml
+
+# Delete a resource
+kubectl delete query my-query
+
+# Edit a resource in-place
+kubectl edit query my-query
+```
+
+### Working with Namespaces
+
+```bash
+# List all namespaces
+kubectl get namespaces
+
+# Switch context to a specific namespace
+kubectl config set-context --current --namespace=my-namespace
+```
+
+### Useful Aliases
+
+Add these to your shell configuration:
+
+```bash
+alias k=kubectl
+alias kgp='kubectl get pods'
+alias kgs='kubectl get svc'
+alias kgn='kubectl get nodes'
+```

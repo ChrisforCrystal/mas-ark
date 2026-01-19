@@ -1,0 +1,79 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: templated-analysis-query
+spec:
+  input: |
+    Please analyze the following {{.data_type}} data for {{.customer}}:
+    
+    Environment: {{.environment}}
+    Analysis Method: {{.method}}
+    Priority Level: {{.priority}}
+    
+    Use the provided API endpoint: {{.api_endpoint}}
+    
+    Additional context: {{.context}}
+  parameters:
+    # Direct values for simple parameters
+    - name: data_type
+      value: "financial"
+    - name: customer
+      value: "Enterprise Customer"
+    - name: priority
+      value: "high"
+    
+    # ConfigMap references for shared configuration
+    - name: environment
+      valueFrom:
+        configMapKeyRef:
+          name: app-config
+          key: current-environment
+    - name: method
+      valueFrom:
+        configMapKeyRef:
+          name: analysis-config
+          key: default-method
+    - name: context
+      valueFrom:
+        configMapKeyRef:
+          name: analysis-config
+          key: standard-context
+    
+    # Secret reference for sensitive data
+    - name: api_endpoint
+      valueFrom:
+        secretKeyRef:
+          name: api-secrets
+          key: financial-api-url
+  
+  target:
+    type: agent
+    name: financial-analyst
+---
+# Supporting ConfigMap for shared configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: analysis-config
+data:
+  default-method: "statistical-analysis"
+  standard-context: "Quarterly financial review with trend analysis"
+---
+# Supporting ConfigMap for environment configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  current-environment: "production"
+  debug-mode: "false"
+---
+# Supporting Secret for sensitive data
+apiVersion: v1
+kind: Secret
+metadata:
+  name: api-secrets
+type: Opaque
+stringData:
+  financial-api-url: "https://api.internal.company.com/finance/v1"
+  backup-api-url: "https://backup-api.internal.company.com/finance/v1"

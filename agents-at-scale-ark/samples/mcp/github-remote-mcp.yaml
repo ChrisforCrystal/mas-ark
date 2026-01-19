@@ -1,0 +1,20 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: MCPServer
+metadata:
+  name: github-remote-mcp
+spec:
+  address:
+    value: "https://api.githubcopilot.com/mcp"
+  headers:
+    - name: "Authorization"
+      value:
+        valueFrom:
+          secretKeyRef:
+            name: github-token
+            key: token
+    - name: "User-Agent"
+      value:
+        value: "mckinsey-agent/1.0"
+  timeout: "30s"
+  transport: http
+  description: "Remote GitHub MCP server hosted by GitHub"

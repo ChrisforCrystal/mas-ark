@@ -1,0 +1,10 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: invalid-agent-builtin-missing-name
+spec:
+  prompt: Test agent
+  modelRef:
+    name: nonexistent-model
+  tools:
+  - type: built-in  # Built-in tools must specify name - should fail admission

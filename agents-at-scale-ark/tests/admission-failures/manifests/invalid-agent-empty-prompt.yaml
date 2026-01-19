@@ -1,0 +1,6 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: invalid-agent-empty-prompt
+spec:
+  prompt: ""  # Empty prompt - should fail admission

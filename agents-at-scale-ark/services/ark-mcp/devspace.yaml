@@ -1,0 +1,77 @@
+# DevSpace configuration for ark-mcp service
+version: v2beta1
+
+dependencies:
+  ark-sdk:
+    path: ../../lib/ark-sdk
+
+pipelines:
+  deploy: |-
+    run_dependency_pipelines --all --pipeline=deploy
+    ./sync-ark-sdk.sh
+    build_images --all
+    create_deployments --all
+  dev: |-
+    run_dependency_pipelines --all --pipeline=dev
+    ./sync-ark-sdk.sh
+    create_deployments --all
+    start_dev --all
+
+images:
+  ark-mcp:
+    image: ark-mcp
+    dockerfile: ./Dockerfile
+    context: .
+
+deployments:
+  ark-mcp:
+    namespace: default
+    helm:
+      chart:
+        path: ./chart
+      values:
+        app:
+          image:
+            repository: ${runtime.images.ark-mcp.image}
+            tag: ${runtime.images.ark-mcp.tag}
+          resources:
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+          # Override security context for dev mode to allow DevSpace sync
+          podSecurityContext:
+            runAsNonRoot: false
+            runAsUser: 0
+            fsGroup: 0
+          securityContext:
+            runAsUser: 0
+            allowPrivilegeEscalation: true
+            readOnlyRootFilesystem: false
+            capabilities:
+              add:
+                - SETUID
+                - SETGID
+                - CHOWN
+                - FOWNER
+                - DAC_OVERRIDE
+        httpRoute:
+          enabled: true
+
+dev:
+  ark-mcp:
+    imageSelector: ark-mcp
+    devImage: python:3.12-slim
+    command: ["sh", "-c", "cd /app/ark-mcp && pip install uv && uv sync && uv run python -m ark_mcp"]
+    namespace: default
+    logs:
+      lastLines: 50
+    sync:
+      - path: .:/app
+        startContainer: true
+        disableDownload: true
+        uploadExcludeFile: .dockerignore
+    ssh:
+      enabled: true

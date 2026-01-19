@@ -1,0 +1,17 @@
+# Models Directory
+#
+# This directory contains AI model configurations that will be automatically 
+# deployed when you run `make quickstart`.
+#
+# Model files are copied from samples/models/ during project creation.
+# You can add more models by copying from the samples directory:
+#
+#   cp ../samples/models/claude.yaml .
+#   cp ../samples/models/gemini.yaml .
+#
+# Each model file typically includes:
+# - Secret for API key storage
+# - Model resource configuration
+#
+# Set your API keys in the .env file - they will be substituted into the
+# model YAML files using environment variable substitution.

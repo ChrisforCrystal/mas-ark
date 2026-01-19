@@ -1,0 +1,11 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Team
+metadata:
+  name: parent-team
+spec:
+  strategy: sequential
+  members:
+    - type: team
+      name: research-team
+    - type: team
+      name: synthesis-team

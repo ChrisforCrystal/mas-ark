@@ -1,0 +1,11 @@
+# Additional Queries
+
+Add your custom queries here alongside the provided sample-query.yaml example.
+
+Each query should be a separate YAML file:
+```
+queries/
+├── sample-query.yaml     # Example provided
+├── my-query.yaml         # Your custom query
+└── another-query.yaml    # Another custom query
+```

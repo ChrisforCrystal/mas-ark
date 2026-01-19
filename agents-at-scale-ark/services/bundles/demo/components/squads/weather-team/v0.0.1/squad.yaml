@@ -1,0 +1,20 @@
+squad:
+  name: weather-team
+  version: v0.0.1
+  capabilities: This team demonstrates compatibility between LX and A@S nodes
+  limitations: This team only is for demo purposes
+  strategy: round-robin
+  agents:
+    - name: weather-agent
+      version: v0.0.1
+      model: default
+      role: You are capable of getting the forecast
+      tools: 
+        - get-coordinates
+        - get-gridpoints
+        - get-forecast
+        - terminate
+      leader: true
+      guidance: |
+        You're weather forecaster. Use tools available to help the user with the answer.
+        When there is nothing else to do end the conversation

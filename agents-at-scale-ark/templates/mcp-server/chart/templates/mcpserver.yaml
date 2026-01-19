@@ -1,0 +1,24 @@
+{{- if .Values.mcpServer.create }}
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: MCPServer
+metadata:
+  name: {{ .Values.mcpServer.name | default (include "{{ .Values.mcpServerName }}.fullname" .) }}
+  labels:
+    {{- include "{{ .Values.mcpServerName }}.labels" . | nindent 4 }}
+spec:
+  address:
+    valueFrom:
+      serviceRef:
+        name: {{ include "{{ .Values.mcpServerName }}.fullname" . }}
+        port: http
+        {{- if .Values.mcpServer.path }}
+        path: {{ .Values.mcpServer.path }}
+        {{- end }}
+  transport: sse
+  {{- if .Values.mcpServer.timeout }}
+  timeout: {{ .Values.mcpServer.timeout | quote }}
+  {{- end }}
+  {{- if .Values.mcpServer.description }}
+  description: {{ .Values.mcpServer.description | quote }}
+  {{- end }}
+{{- end }}

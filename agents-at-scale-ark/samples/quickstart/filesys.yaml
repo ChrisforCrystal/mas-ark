@@ -1,0 +1,73 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Tool
+metadata:
+  name: weather-report
+spec:
+  type: http
+  http:
+    url: https://api.weather.gov/gridpoints/TOP/32,81/forecast
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: agent-fetcher
+spec:
+  prompt: You're helpful agent. Use the weather-report tool to get report.
+  modelRef:
+    name: gpt-4-model
+  tools:
+    - type: http
+      name: weather-report
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: agent-filesys
+spec:
+  prompt: |
+    You're helping users to store weather reports. List existing files before writing, select unique name if exists.
+  modelRef:
+    name: gpt-4-model
+  tools:
+    - type: mcp
+      name: mcp-filesystem-write-file
+    - type: mcp
+      name: mcp-filesystem-list-directory
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: agent-filesys-review
+spec:
+  prompt: You're helping users to list and view weather reports. Use the tools available to list all the reports stored.
+  modelRef:
+    name: gpt-4-model
+  tools:
+    - type: mcp
+      name: mcp-filesystem-read-file
+    - type: mcp
+      name: mcp-filesystem-list-directory
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Team
+metadata:
+  name: team-weather-filesys
+spec:
+  members:
+    - name: agent-fetcher
+      type: agent
+    - name: agent-filesys
+      type: agent
+    - name: agent-filesys-review
+      type: agent
+  strategy: "sequential"
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: query-fetcher
+spec:
+  input: Get and store weather report, produce a list of reports available.
+  target:
+    type: team
+    name: team-weather-filesys

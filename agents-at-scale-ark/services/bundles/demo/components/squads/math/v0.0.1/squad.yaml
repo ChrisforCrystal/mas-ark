@@ -1,0 +1,15 @@
+squad:
+  name: math
+  version: v0.0.1
+  capabilities: This team is good at math
+  limitations: This team is not good at literature
+  strategy: round-robin
+  agents:
+    - name: math-agent
+      version: v0.0.1
+      model: default
+      role: You are capable of solving and explaining math problems
+      tools: []
+      leader: true
+      guidance: |
+        You solve math problems comprehensively and clearly.  You explain your work

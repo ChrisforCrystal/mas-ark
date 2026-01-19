@@ -1,0 +1,16 @@
+# Gemini
+
+Our Universal Adapter allows you to use any LLM that is OpenAI API compatible, such as Claude, Gemini, OpenAI, Mistral and more.
+
+Deploy a Gemini model and agent:
+
+```bash
+export GEMINI_API_KEY="your-key"
+envsubst < samples/models/gemini.yaml | kubectl apply -f -
+```
+
+Using the [Gemini OpenAI Compatibility](https://ai.google.dev/gemini-api/docs/openai) endpoint is as simple as using this address:
+
+```
+https://generativelanguage.googleapis.com/v1beta/openai/
+```

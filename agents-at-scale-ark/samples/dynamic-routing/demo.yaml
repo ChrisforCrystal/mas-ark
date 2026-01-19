@@ -1,0 +1,109 @@
+# 1. SPECIALIZED WORKERS (专才)
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: math-expert
+spec:
+  description: "Expert in mathematics and calculation."
+  modelRef:
+    name: default
+  prompt: |
+    You are a mathematician. 
+    You only solve math problems. 
+    Keep your answers concise and numerical.
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: poet
+spec:
+  description: "Expert in writing poems and haikus."
+  modelRef:
+    name: default
+  prompt: |
+    You are a creative poet. 
+    You write beautiful haikus and poems.
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: historian
+spec:
+  description: "Expert in history."
+  modelRef:
+    name: default
+  prompt: |
+    You are a historian. 
+    You know historical facts about numbers and years.
+
+
+# 2. ROUTER AGENT (组长/派单员)
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Agent
+metadata:
+  name: router
+spec:
+  description: "Team coordinator who selects the next speaker."
+  modelRef:
+    name: default
+  prompt: |
+    You are a smart team coordinator.
+    Your job is to routing the task to the right expert.
+
+
+# 3. DYNAMIC TEAM (Selector Strategy)
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Team
+metadata:
+  name: dynamic-team
+spec:
+  strategy: selector
+  maxTurns: 5
+  selector:
+    agent: router
+    selectorPrompt: |
+      You are the orchestrator of a team.
+
+      The available experts are: {{.Roles}}
+
+      Based on the conversation history below, verify if the task is complete or who should speak next.
+
+      Conversation History:
+      {{.History}}
+
+      Instructions:
+      1. If the math verification is needed, choose 'math-expert'.
+      2. If a poem is requested, choose 'poet'.
+      3. If historical context is needed, choose 'historian'.
+      4. Do NOT select the same person twice in a row.
+
+      Select the next role from [{{.Participants}}] to play. Only return the role name.
+
+  members:
+    - name: math-expert
+      type: agent
+    - name: poet
+      type: agent
+    - name: historian
+      type: agent
+
+
+# 4. QUERY (任务单)
+# 注意：Query 通常建议单独 apply，因为 Team 创建需要时间 Ready
+---
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: dynamic-routing-query
+spec:
+  target:
+    name: dynamic-team
+    type: team
+  input: |
+    Please simulate a workflow:
+    1. Calculate 50 * 2.
+    2. Write a Haiku about the result (100).
+    3. Tell me a historical event that happened in year 100 AD.

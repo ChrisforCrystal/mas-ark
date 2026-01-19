@@ -1,0 +1,178 @@
+# Memory
+
+The `Memory` resource represents persistent storage for converations with agents. It is designed to be agnostic of the backend implementation, meaning that a database, queue or other system can be used.
+
+The backend for a memory resource is an HTTP server that implements the [Memory API Specification](#memory-api-specification).
+
+In time, this resource will also configure how operations such as compaction can be performed. A reference implementation [ARK Broker](#ark-broker) is available.
+
+## Specification
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Memory
+metadata:
+  name: ark-broker
+spec:
+  # The address of the service that handles memory API calls.
+  address:
+    # A 'value' can be provided to give a specific URL, or a service ref to
+    # point to a specific service in the cluster.
+    valueFrom:
+      # In this example, we point to a deployment of the "ARK Broker".
+      serviceRef:
+        name: ark-broker
+        port: 8080
+```
+
+## Usage
+
+Memory can be specified in a query resource. If a Memory resource named `default` exists in the namespace, it will be automatically selected for queries that don't explicitly specify a memory.
+
+Memory in a query resource:
+
+```yaml
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: chat-with-memory
+spec:
+  input: "What did we discuss earlier?"
+  target:
+    - name: my-agent
+  memory:
+    name: ark-broker
+  # Optional: specify session ID to group related queries for tracking
+  sessionId: "my-session"
+  # Optional: specify conversation ID for memory continuity
+  # If not provided, a new conversation ID will be generated
+  conversationId: "my-conversation"
+```
+
+Memory can also be specified via the CLIs:
+
+```bash
+# Using fark
+fark query --input "Continue our conversation" --session-id "my-session" --conversation-id "my-conversation" my-agent
+
+# Using ark
+ark query agent/my-agent "Continue our conversation" --session-id "my-session" --conversation-id "my-conversation"
+```
+
+**Session ID vs Conversation ID:**
+- **sessionId**: Groups related queries for tracking and telemetry purposes
+- **conversationId**: Associates queries with a specific memory/conversation thread for context continuity
+
+When creating a query in the dashboard it is also possible to specify the memory resource. Note that in the dashbhoard 'chat' window, no memory is used, messages are simply stored client-side as is common for chat applications.
+
+## Memory API Specification
+
+Memory is implemented as a simple HTTP server:
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/conversations` | Create a new conversation |
+| GET | `/conversations` | List all conversation IDs |
+| GET | `/conversations/{id}` | Get conversation details and messages |
+| DELETE | `/conversations/{id}` | Delete a specific conversation |
+| POST | `/messages` | Store messages (requires conversation_id) |
+| GET | `/messages` | Retrieve messages with optional filtering |
+| GET | `/health` | Health check |
+
+### Create Conversation
+
+**POST** `/conversations`
+
+Creates a new conversation and returns its ID. This must be called before storing messages.
+
+Response:
+```json
+{
+  "conversation_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+### Store Messages
+
+**POST** `/messages`
+
+Stores messages for an existing conversation. The `conversation_id` is required.
+
+```json
+{
+  "conversation_id": "550e8400-e29b-41d4-a716-446655440000",
+  "query_id": "query-uuid",
+  "messages": [
+    {
+      "role": "user",
+      "content": "What is the weather like?"
+    },
+    {
+      "role": "assistant",
+      "content": "I don't have access to real-time weather data."
+    }
+  ]
+}
+```
+
+### Get Conversation
+
+**GET** `/conversations/{id}`
+
+Returns conversation details including all messages:
+
+```json
+{
+  "conversation_id": "550e8400-e29b-41d4-a716-446655440000",
+  "messages": [
+    {
+      "timestamp": "2024-01-01T12:00:00Z",
+      "conversation_id": "550e8400-e29b-41d4-a716-446655440000",
+      "query_id": "query-uuid",
+      "message": { "role": "user", "content": "Hello" },
+      "sequence": 1
+    }
+  ]
+}
+```
+
+### Retrieve Messages
+
+**GET** `/messages?conversation_id={id}&query_id={id}&limit={n}&offset={n}`
+
+Retrieves stored conversation messages:
+- `conversation_id` (optional) - Filter by conversation
+- `query_id` (optional) - Filter by query
+- `limit` (optional, default: 100) - Max messages to return
+- `offset` (optional, default: 0) - Skip messages for pagination
+
+Returns timestamped message records:
+
+```json
+{
+  "messages": [
+    {
+      "timestamp": "2024-01-01T12:00:00Z",
+      "conversation_id": "conv-abc123",
+      "query_id": "query-uuid",
+      "message": {
+        "role": "user",
+        "content": "What is the weather like?"
+      }
+    }
+  ],
+  "total": 100,
+  "limit": 50,
+  "offset": 0
+}
+```
+
+### List Conversations
+
+**GET** `/conversations`
+
+Returns object with conversation IDs:
+
+```json
+{"conversations": ["conv-1", "conv-2", "conv-3"]}
+```

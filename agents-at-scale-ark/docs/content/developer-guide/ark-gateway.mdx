@@ -1,0 +1,183 @@
+---
+title: Ark Gateway
+description: Kubernetes Gateway API configuration for ARK services
+---
+
+# Ark Gateway
+
+ARK uses Kubernetes Gateway API to provide access to services like the APIs and dashboard. The ARK service 'Localhost Gateway' is available to run as a lightweight gateway that allows you to access services.
+
+## Quickstart
+
+Install the Localhost Gateway service with:
+
+```bash
+make localhost-gateway-install
+```
+
+Each of the ARK services includes an `HTTPRoute` - once the Localhost Gateway has been installed you can see these routes with:
+
+```bash
+make routes
+```
+
+![Screenshot of 'make routes'](./images/make-routes.png)
+
+The ARK Dashboard is configured to run on the base route, from the dashboard you can also see configured services as well as the routes that are exposed:
+
+![Screenshot of ARK Dashboard Services](./images/ark-dashboard-services.png)
+
+## Gateway API Overview
+
+The [Gateway API](https://gateway-api.sigs.k8s.io/) replaces the Ingress API as the next-generation specification for managing HTTP and TCP traffic in Kubernetes clusters. It separates infrastructure configuration (`Gateway`) from application routing rules (`HTTPRoute`), providing better separation of concerns and more powerful traffic management.
+
+The Localhost Gateway service installs the official [Gateway CRDs](https://gateway-api.sigs.k8s.io/guides/#installing-gateway-api). The implementation of the Gateway used is the popular [NGINX Gateway Fabric 2.0](https://docs.nginx.com/nginx-gateway-fabric/). The [NGINX Gateway Fabric CRDs](https://docs.nginx.com/nginx-gateway-fabric/installation/installing-ngf/manifests/) are installed, and then the [NGINX Gateway Fabric 2.0 Helm Chart](https://docs.nginx.com/nginx-gateway-fabric/install/helm/) is installed.
+
+## Architecture
+
+The Localhost Gateway architecture looks like this:
+
+```
+┌─────────────────────────────┐
+│ NGINX Gateway Fabric        │ ◄── Controller that watches and manages Gateway resources
+└─────────────────────────────┘
+
+┌─────────────────────────────┐
+│ Gateway                     │ ◄── name: localhost-gateway, namespace: ark-system
+│ (e.g. localhost-gateway)    │     listeners: *.127.0.0.1.nip.io:80, 127.0.0.1.nip.io:80
+└──────────────▲──────────────┘     gatewayClassName: nginx
+               │ parentRef
+               │
+┌─────────────────────────────┐
+│ HTTPRoute                   │ ◄── hostname: (e.g. ark-dashboard).ark-system.127.0.0.1.nip.io
+│ (e.g. ark-dashboard)        │     parentRefs: [localhost-gateway]
+└──────────────┬──────────────┘     backendRefs: [(e.g. ark-dashboard) service]
+               │ routes to
+               ▼
+┌─────────────────────────────┐
+│ Service                     │ ◄── name: (e.g. ark-dashboard), namespace: ark-system
+│ (e.g. ark-dashboard)        │     selector: app=(e.g. ark-dashboard)
+└──────────────┬──────────────┘     ports: 3000
+               │ routes to
+               ▼
+┌─────────────────────────────┐
+│ Pod                         │ ◄── labels: app=(e.g. ark-dashboard)
+│ (e.g. ark-dashboard)        │     ports: 3000
+└─────────────────────────────┘
+```
+
+## Configuration
+
+### Gateway Resource
+
+The Gateway resource defines the infrastructure configuration:
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: localhost-gateway
+  namespace: ark-system
+spec:
+  gatewayClassName: nginx
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+    hostname: "*.127.0.0.1.nip.io"
+  - name: http-root
+    port: 80
+    protocol: HTTP
+    hostname: "127.0.0.1.nip.io"
+```
+
+### HTTPRoute Resources
+
+Services define HTTPRoute resources to expose themselves:
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ark-dashboard
+  namespace: ark-system
+spec:
+  parentRefs:
+  - name: localhost-gateway
+    namespace: ark-system
+  hostnames:
+  - "dashboard.127.0.0.1.nip.io"
+  rules:
+  - backendRefs:
+    - name: ark-dashboard
+      port: 3000
+```
+
+## Service Integration
+
+ARK services automatically create HTTPRoute resources when they include Gateway API configuration. This allows services to be automatically exposed through the gateway without manual configuration.
+
+### Service Requirements
+
+For a service to be exposed through the gateway:
+
+1. **Service resource** - Standard Kubernetes service
+2. **HTTPRoute resource** - Defines routing rules
+3. **Gateway reference** - Points to the localhost-gateway
+
+### Automatic Discovery
+
+The ARK dashboard automatically discovers and displays services that are exposed through the gateway, providing a centralized view of all available services and their routes.
+
+## Development Workflow
+
+### Local Development
+
+For local development, the localhost gateway provides easy access to services:
+
+1. **Install gateway**: `make localhost-gateway-install`
+2. **Deploy services**: Services automatically create routes
+3. **Access services**: Use the provided URLs (e.g., `http://dashboard.127.0.0.1.nip.io:8080`)
+
+### Service URLs
+
+Common service URLs when using localhost gateway:
+
+- **Dashboard**: `http://dashboard.127.0.0.1.nip.io:8080`
+- **ARK API**: `http://ark-api.127.0.0.1.nip.io:8080` (includes A2A Gateway endpoints)
+
+## Troubleshooting
+
+### Common Issues
+
+**Gateway not ready**
+```bash
+# Check gateway status
+kubectl get gateway localhost-gateway -n ark-system
+
+# Check gateway fabric pods
+kubectl get pods -n nginx-gateway
+```
+
+**Routes not working**
+```bash
+# List all HTTPRoutes
+kubectl get httproutes -A
+
+# Check specific route
+kubectl describe httproute ark-dashboard -n ark-system
+```
+
+**Service not accessible**
+```bash
+# Check service endpoints
+kubectl get endpoints -n ark-system
+
+# Test service directly
+kubectl port-forward service/ark-dashboard 3000:3000 -n ark-system
+```
+
+## Next Steps
+
+- [Services](/developer-guide/services) - Learn about ARK services
+- [Observability](/developer-guide/observability) - Monitor your gateway and services

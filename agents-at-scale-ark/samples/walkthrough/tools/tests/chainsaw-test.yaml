@@ -1,0 +1,132 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: web-search-tool
+spec:
+  steps:
+    - name: setup-prerequisites
+      try:
+        # Setup Azure credentials for model (needed for query execution)
+        - script:
+            skipLogOutput: true
+            content: |
+              set -u
+              echo "{\"token\": \"$E2E_TEST_AZURE_OPENAI_KEY\", \"url\": \"$E2E_TEST_AZURE_OPENAI_BASE_URL\"}"
+            outputs:
+            - name: azure
+              value: (json_parse($stdout))
+        
+        # Create model secret and model for query execution
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: default-model-token
+              type: Opaque
+              data:
+                token: (base64_encode($azure.token))
+        
+        - apply:
+            resource:
+              apiVersion: ark.mckinsey.com/v1alpha1
+              kind: Model
+              metadata:
+                name: default
+              spec:
+                type: azure
+                model:
+                  value: gpt-4.1-mini
+                config:
+                  azure:
+                    baseUrl:
+                      value: ($azure.url)
+                    apiKey:
+                      valueFrom:
+                        secretKeyRef:
+                          name: default-model-token
+                          key: token
+                    apiVersion:
+                      value: "2024-12-01-preview"
+        
+        # Setup RBAC permissions
+        - apply:
+            file: "../../tests/manifests/rbac/chainsaw-permissions.yaml"
+
+    - name: test-tool-creation-and-functionality
+      try:
+        # Create the tool
+        - apply:
+            file: "../web-search-tool.yaml"
+        
+        # Verify tool is created correctly
+        - assert:
+            resource:
+              apiVersion: ark.mckinsey.com/v1alpha1
+              kind: Tool
+              metadata:
+                name: web-search
+                labels:
+                  category: research
+                  type: web-tool
+              spec:
+                type: http
+                inputSchema:
+                  type: object
+                  properties:
+                    query:
+                      type: string
+                      description: Search query to execute on the web
+                    num_results:
+                      type: integer
+                      description: Number of search results to return
+                      default: 5
+                      minimum: 1
+                      maximum: 10
+                  required: ["query"]
+        # Create and execute a query targeting the tool directly
+        - apply:
+            file: "queries/web-search-query.yaml"
+        
+        # Wait for query completion and validate response
+        - assert:
+            resource:
+              apiVersion: ark.mckinsey.com/v1alpha1
+              kind: Query
+              metadata:
+                name: web-search-tool-test
+              status:
+                phase: done
+        
+        # Validate tool response contains search results
+        - assert:
+            resource:
+              apiVersion: ark.mckinsey.com/v1alpha1
+              kind: Query
+              metadata:
+                name: web-search-tool-test
+              status:
+                (length(responses)): 1
+                (contains(responses[0].target.name, 'web-search')): true
+                (length(responses[0].content) > `50`): true
+                (contains(responses[0].content, 'duck.co')): true
+        
+        - script:
+            content: |
+              echo "✅ Web Search Tool Test Results:"
+              echo "  - Tool created successfully"
+              echo "  - Query executed and completed"
+              echo "  - DuckDuckGo API integration working"
+              echo ""
+              echo "Web search tool is ready for agent integration"
+      
+      catch:
+        - events: {}
+        - describe:
+            apiVersion: ark.mckinsey.com/v1alpha1
+            kind: Tool
+            name: web-search
+        - describe:
+            apiVersion: ark.mckinsey.com/v1alpha1
+            kind: Query
+            name: web-search-tool-test

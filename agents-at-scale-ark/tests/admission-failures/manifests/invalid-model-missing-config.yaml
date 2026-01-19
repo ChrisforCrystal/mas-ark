@@ -1,0 +1,10 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Model
+metadata:
+  name: invalid-model-missing-config
+spec:
+  type: completions
+  provider: azure
+  model:
+    value: gpt-4.1-mini
+  # Missing required 'config' section - should fail admission

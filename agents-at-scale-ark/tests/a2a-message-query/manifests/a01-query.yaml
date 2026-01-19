@@ -1,0 +1,9 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: echo-test-query
+spec:
+  input: Hello from A2A echo agent!
+  target:
+    type: agent
+    name: echo-agent

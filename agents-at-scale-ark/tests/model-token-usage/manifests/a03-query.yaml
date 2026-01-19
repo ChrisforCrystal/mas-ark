@@ -1,0 +1,14 @@
+apiVersion: ark.mckinsey.com/v1alpha1
+kind: Query
+metadata:
+  name: model-token-query
+spec:
+  input: |
+    Explain quantum computing concepts including superposition, entanglement, and quantum gates.
+    Describe the differences between classical and quantum algorithms, provide examples of
+    quantum algorithms like Shor's and Grover's algorithms, and discuss current challenges
+    in quantum computing hardware and error correction. Include potential applications
+    in cryptography, optimization, and scientific simulation.
+  target:
+    type: model
+    name: model-token-test

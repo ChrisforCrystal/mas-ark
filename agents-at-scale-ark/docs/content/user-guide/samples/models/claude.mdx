@@ -1,0 +1,21 @@
+# Claude
+
+Our Universal Adapter allows you to use any LLM that is OpenAI API compatible, including Anthropic's Claude models.
+
+Deploy a Claude model and agent:
+
+```bash
+export ANTHROPIC_API_KEY="your-key"
+envsubst < samples/models/claude.yaml | kubectl apply -f -
+```
+
+This will create:
+- A Secret containing your Anthropic API key
+- A Model resource configured for Claude Opus 4
+- An Agent resource that uses the Claude model
+
+The Claude model uses Anthropic's API endpoint:
+
+```
+https://api.anthropic.com/v1/
+```
